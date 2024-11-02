@@ -1,79 +1,26 @@
 {
   "project_info": {
-    "project_number": "73965937301",
-    "project_id": "whiskyapp-8e2a2",
-    "storage_bucket": "whiskyapp-8e2a2.appspot.com"
+    "project_number": "597288885189",
+    "project_id": "whiskyapplication-344af",
+    "storage_bucket": "whiskyapplication-344af.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:73965937301:android:c821d5bb7d8bd21e01b19c",
-        "android_client_info": {
-          "package_name": "com.example.whisky_app"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "73965937301-bru3297cv3ru9gjdiv614egc10vvg2p5.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAWoD8_K70K2LgXLUS2oLO7Rzh8AGTnD-s"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "73965937301-bru3297cv3ru9gjdiv614egc10vvg2p5.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "73965937301-1fj72j0mpiqfg5qcav1d8k9uoeql27m3.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.whiskyApp"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:73965937301:android:a99bf34401757a8a01b19c",
+        "mobilesdk_app_id": "1:597288885189:android:d508f3adf6132517bac9ac",
         "android_client_info": {
           "package_name": "com.example.whisky_application"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "73965937301-bru3297cv3ru9gjdiv614egc10vvg2p5.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAWoD8_K70K2LgXLUS2oLO7Rzh8AGTnD-s"
+          "current_key": "AIzaSyDGYWDMhfLneNkGbfssxLklr0RD8FXa9q4"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "73965937301-bru3297cv3ru9gjdiv614egc10vvg2p5.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "73965937301-1fj72j0mpiqfg5qcav1d8k9uoeql27m3.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.whiskyApp"
-              }
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

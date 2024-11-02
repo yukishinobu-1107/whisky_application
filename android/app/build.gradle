@@ -3,7 +3,7 @@ plugins {
     id "kotlin-android"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
-    id 'com.google.gms.google-services' apply false  // バージョン指定を削除
+    id 'com.google.gms.google-services' // apply false を削除
 }
 dependencies {
     // Import the Firebase BoM
