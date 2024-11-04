@@ -5,7 +5,6 @@ import 'package:whisky_application/firebase_options.dart';
 import 'event_search/event_search.dart';
 import 'home/home.dart';
 import 'login/auth_checker.dart';
-import 'login/login_screen.dart';
 import 'navigation_bar/nav_bar.dart'; // LoginScreenをインポート
 
 Future<void> main() async {
