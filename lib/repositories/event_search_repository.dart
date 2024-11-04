@@ -59,6 +59,7 @@ class EventSearchRepository {
         'organizer': eventData['organizer'],
         'eventType': eventData['eventType'],
         'eventUrl': eventData['eventUrl'],
+        'uid':eventData['uid']
       });
 
       print('イベントが正常に保存されました');
