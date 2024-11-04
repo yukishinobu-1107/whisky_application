@@ -46,8 +46,9 @@ dependencies:
   hooks_riverpod: ^2.1.1
   google_maps_flutter: ^2.2.5
   firebase_auth: ^5.3.1
-  google_sign_in: ^5.3.0
-  firebase_app_check: ^0.3.1+4
+  google_sign_in: ^6.2.1
+  flutter_image_compress: ^2.3.0
+#  firebase_app_check: ^0.3.1+4
 
 
 
