@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthのインポート
 import '../constants/regions_and_prefectures.dart';
 import '../event_registration/event_registration_form.dart';
 import '../view_model/event_search_view_model.dart';
@@ -14,9 +14,6 @@ class EventSearchPage extends ConsumerStatefulWidget {
 class _EventSearchPageState extends ConsumerState<EventSearchPage> {
   String? _selectedPrefecture = '東京都'; // 選択された都道府県を保持
 
-  // 仮のプレミアム会員ステータス
-  bool isPremiumUser = true; // trueなら有料会員、falseなら非会員
-
   @override
   void initState() {
     super.initState();
@@ -26,14 +23,13 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
         .fetchEvents(_selectedPrefecture));
   }
 
-  // Function to show prefecture dropdown as a bottom sheet
   void _showPrefectureDropdown(BuildContext context) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: MediaQuery.of(context).size.height * 0.5, // 画面の半分の高さ
-          color: Colors.black, // 背景を黒に設定
+          height: MediaQuery.of(context).size.height * 0.5,
+          color: Colors.black,
           child: ListView.builder(
             itemCount: prefectures.length,
             itemBuilder: (context, index) {
@@ -45,12 +41,11 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
                 onTap: () {
                   setState(() {
                     _selectedPrefecture = prefectures[index];
-                    // 都道府県選択に応じてイベントを取得
                     ref
                         .read(eventSearchProvider.notifier)
                         .fetchEvents(_selectedPrefecture);
                   });
-                  Navigator.pop(context); // ドロップダウンを閉じる
+                  Navigator.pop(context);
                 },
               );
             },
@@ -63,6 +58,7 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
   @override
   Widget build(BuildContext context) {
     final eventList = ref.watch(eventSearchProvider);
+    final uid = FirebaseAuth.instance.currentUser?.uid; // 現在のユーザーIDを取得
 
     return Scaffold(
       appBar: AppBar(
@@ -73,43 +69,15 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
               fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Colors.black,
-
-        // 右側にプラスボタンを表示
         actions: [
-          // プラスボタンを豪華に、華やかに装飾
           IconButton(
             onPressed: () {
-              // イベント追加ページへの遷移処理
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => EventRegistrationForm()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => EventRegistrationForm()));
             },
-            icon: Stack(
-              alignment: Alignment.center,
-              children: [
-                // 背景の輝きを演出
-                Positioned(
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          Colors.yellowAccent.withOpacity(0.3),
-                          Colors.transparent,
-                        ],
-                        stops: [0.6, 1],
-                      ),
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.add_circle,
-                  color: Colors.yellowAccent, // ゴールドに近い色で特権を強調
-                  size: 36, // 通常より少し大きめ
-                ),
-              ],
-            ),
+            icon: Icon(Icons.add, color: Colors.yellowAccent, size: 36),
           ),
         ],
       ),
@@ -123,7 +91,7 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
                 style: const TextStyle(color: Colors.grey, fontSize: 16),
               ),
               onTap: () {
-                _showPrefectureDropdown(context); // モーダルボトムシートを表示
+                _showPrefectureDropdown(context);
               },
               tileColor: Colors.grey[800],
               shape: RoundedRectangleBorder(
@@ -131,31 +99,39 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
                 side: BorderSide(color: Colors.orangeAccent, width: 2),
               ),
               trailing:
-                  const Icon(Icons.arrow_drop_down, color: Colors.orangeAccent),
+              const Icon(Icons.arrow_drop_down, color: Colors.orangeAccent),
             ),
           ),
           Expanded(
             child: eventList.isEmpty
                 ? Center(
-                    child: Text(
-                      'イベントが見つかりません',
-                      style: TextStyle(color: Colors.white70, fontSize: 18),
-                    ),
-                  )
+              child: Text(
+                'イベントが見つかりません',
+                style: TextStyle(color: Colors.white70, fontSize: 18),
+              ),
+            )
                 : Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ListView.builder(
-                      itemCount: eventList.length,
-                      itemBuilder: (context, index) {
-                        final event = eventList[index];
-                        return EventCard(event: event);
-                      },
-                    ),
-                  ),
+              padding: const EdgeInsets.all(16.0),
+              child: ListView.builder(
+                itemCount: eventList.length,
+                itemBuilder: (context, index) {
+                  final event = eventList[index];
+                  return EventCard(
+                    event: event,
+                    uid: uid ?? '', // uidがnullの場合に空文字列を指定
+                    onDelete: () async {
+                      await ref
+                          .read(eventSearchProvider.notifier)
+                          .fetchEvents(_selectedPrefecture);
+                    },
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
-      backgroundColor: Colors.grey[900], // 背景色
+      backgroundColor: Colors.grey[900],
     );
   }
 }

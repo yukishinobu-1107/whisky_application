@@ -27,7 +27,6 @@ class _HomeHeadState extends State<HomeHead> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
     final FirebaseAuth auth = FirebaseAuth.instance;
@@ -38,8 +37,7 @@ class _HomeHeadState extends State<HomeHead> {
     final pickedFiles = await picker.pickMultiImage();
     if (pickedFiles != null) {
       setState(() {
-        _images =
-            pickedFiles.map((pickedFile) => File(pickedFile.path)).toList();
+        _images = pickedFiles.map((pickedFile) => File(pickedFile.path)).toList();
       });
     }
   }
@@ -56,43 +54,51 @@ class _HomeHeadState extends State<HomeHead> {
     );
   }
 
-  Future<String> _uploadImage(File imageFile) async {
+  Future<String?> _uploadImage(File imageFile) async {
     try {
+      // ファイル名を抽出して、ストレージに保存
       String fileName = imageFile.path.split('/').last;
-      Reference storageRef =
-          FirebaseStorage.instance.ref().child('images/$fileName');
+      Reference storageRef = FirebaseStorage.instance.ref().child('images/$fileName');
       UploadTask uploadTask = storageRef.putFile(imageFile);
+
+      // アップロード完了を待機
       TaskSnapshot snapshot = await uploadTask.whenComplete(() {});
-      return await snapshot.ref.getDownloadURL();
+
+      // アップロード成功時にダウンロードURLを取得
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // ダウンロードURLが取得できた場合のみ返す
+      return downloadUrl.isNotEmpty ? downloadUrl : null;
     } catch (e) {
+      // アップロードに失敗した場合のエラーログ出力
       print("Error uploading image: $e");
-      return '';
+      return null;
     }
   }
+
 
   void _resetFields() {
     setState(() {
       _images = [];
       _text = "";
+      imageUrls = [];
     });
   }
 
-  Future<void> _uploadImagesAndSaveToFirestore(
-      List<File> imageFiles, String _text) async {
+  Future<void> _uploadImagesAndSaveToFirestore(List<File> imageFiles) async {
     for (File imageFile in imageFiles) {
-      String imageUrl = await _uploadImage(imageFile);
-      if (imageUrl.isNotEmpty) {
-        setState(() {
-          imageUrls.add(imageUrl);
-        });
+      String? imageUrl = await _uploadImage(imageFile); // String? に対応
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        imageUrls.add(imageUrl); // 成功したURLのみ追加
       }
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // 全体の背景を黒に設定
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
@@ -106,24 +112,20 @@ class _HomeHeadState extends State<HomeHead> {
                     height: 90.0,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white, // 白い枠線を追加して背景と差別化
-                        width: 3,
-                      ),
+                      border: Border.all(color: Colors.white, width: 3),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.white
-                              .withOpacity(0.5), // 白の影を追加して画像を浮き立たせる
+                          color: Colors.white.withOpacity(0.5),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
                       ],
                       image: DecorationImage(
-                        fit: BoxFit.cover, // 画像全体を表示
+                        fit: BoxFit.cover,
                         image: AssetImage("assets/person_icon.png"),
                         colorFilter: ColorFilter.mode(
-                          Colors.white.withOpacity(0.5), // 透明度を調整した白を使って明るくする
-                          BlendMode.screen, // 明るさを強調するために BlendMode.screen を使用
+                          Colors.white.withOpacity(0.5),
+                          BlendMode.screen,
                         ),
                       ),
                     ),
@@ -131,29 +133,24 @@ class _HomeHeadState extends State<HomeHead> {
                 ),
                 Expanded(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.only(top: 60, left: 10, right: 10),
+                    padding: const EdgeInsets.only(top: 60, left: 10, right: 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 入力フィールド
                         TextField(
-                          style:
-                              const TextStyle(color: Colors.white), // テキストを白に
+                          style: const TextStyle(color: Colors.white),
                           onChanged: (val) {
                             _text = val;
                           },
                           decoration: InputDecoration(
                             hintText: '今夜は何を飲んでますか？',
-                            hintStyle: TextStyle(
-                                color: Colors.grey.shade500), // ヒントの色をグレーに
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 10),
+                            hintStyle: TextStyle(color: Colors.grey.shade500),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                             filled: true,
-                            fillColor: Colors.grey.shade900, // フィールドの背景をダークグレーに
+                            fillColor: Colors.grey.shade900,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none, // 枠線を消す
+                              borderSide: BorderSide.none,
                             ),
                           ),
                         ),
@@ -163,51 +160,27 @@ class _HomeHeadState extends State<HomeHead> {
                               child: SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 child: Row(
-                                  children:
-                                      _images.asMap().entries.map((entry) {
+                                  children: _images.asMap().entries.map((entry) {
                                     int index = entry.key;
                                     File image = entry.value;
                                     return GestureDetector(
                                       onTap: () => _openImageSlideView(index),
                                       child: Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.only(right: 8),
                                         child: SizedBox(
                                           width: 50,
                                           height: 50,
                                           child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            child: Stack(
-                                              children: [
-                                                Image.file(
-                                                  image,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error,
-                                                      stackTrace) {
-                                                    return const Text(
-                                                        '画像読み込み失敗',
-                                                        style: TextStyle(
-                                                            color: Colors.red));
-                                                  },
-                                                ),
-                                                // オーバーレイを追加して見やすくする
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      begin:
-                                                          Alignment.topCenter,
-                                                      end: Alignment
-                                                          .bottomCenter,
-                                                      colors: [
-                                                        Colors.transparent,
-                                                        Colors.black
-                                                            .withOpacity(0.5)
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.file(
+                                              image,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return const Text(
+                                                  '画像読み込み失敗',
+                                                  style: TextStyle(color: Colors.red),
+                                                );
+                                              },
                                             ),
                                           ),
                                         ),
@@ -219,13 +192,11 @@ class _HomeHeadState extends State<HomeHead> {
                             ),
                             IconButton(
                               onPressed: getImageFromGallery,
-                              icon: const Icon(Icons.image,
-                                  color: Colors.orangeAccent), // アイコンをオレンジに
+                              icon: const Icon(Icons.image, color: Colors.orangeAccent),
                             ),
                             Text(
                               '追加',
-                              style: WhiskyAppTextStyle.mBold
-                                  .copyWith(color: Colors.white), // テキストを白に
+                              style: WhiskyAppTextStyle.mBold.copyWith(color: Colors.white),
                             ),
                             const Spacer(),
                             SizedBox(
@@ -233,39 +204,54 @@ class _HomeHeadState extends State<HomeHead> {
                               height: 30,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      Colors.orangeAccent, // ボタンをオレンジに
+                                  backgroundColor: Colors.orangeAccent,
                                 ),
                                 onPressed: () async {
+                                  if (_text.isEmpty && _images.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('投稿内容または画像を追加してください')),
+                                    );
+                                    return;
+                                  }
+
                                   ConfirmationDialog.show(
                                     context,
                                     '投稿確認',
                                     'この内容で投稿してもよろしいですか？',
-                                    () async {
-                                      await _uploadImagesAndSaveToFirestore(
-                                          _images, _text);
-                                      final user = await _profileRepository
-                                          .getCurrentUser();
-                                      Map<String, dynamic>? userProfile =
-                                          await _profileRepository
-                                              .getUserProfile(user!.uid);
-                                      if (userProfile != null) {
-                                        print(userProfile['name']);
-                                        _homeRepository.savePost(imageUrls,
-                                            _text, user!, userProfile['name']);
+                                        () async {
+                                      await _uploadImagesAndSaveToFirestore(_images);
+                                      final user = FirebaseAuth.instance.currentUser;
+
+                                      if (user == null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('ユーザーがログインしていません')),
+                                        );
+                                        return;
                                       }
-                                      setState(() {
-                                        imageUrls = [];
-                                      });
-                                      _resetFields();
+
+                                      bool success = await _homeRepository.savePost(
+                                        imageUrls,
+                                        _text,
+                                        user.displayName ?? 'Unknown',
+                                      );
+
+                                      if (success) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('投稿が正常に保存されました')),
+                                        );
+                                        _resetFields();
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('投稿の保存に失敗しました')),
+                                        );
+                                      }
                                     },
                                   );
                                 },
                                 child: const Text(
                                   '投稿',
                                   style: TextStyle(
-                                    color:
-                                        Colors.black, // ボタンテキストを黒にしてコントラストを高める
+                                    color: Colors.black,
                                     fontSize: 16,
                                   ),
                                 ),
