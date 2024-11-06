@@ -1,3 +1,4 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -6,10 +7,20 @@ import 'event_search/event_search.dart';
 import 'home/home.dart';
 import 'login/auth_checker.dart';
 import 'navigation_bar/nav_bar.dart'; // LoginScreenをインポート
+import 'package:flutter/foundation.dart'; // kReleaseModeを使用するために追加
+import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // App Check を有効化
+  await FirebaseAppCheck.instance.activate(
+    appleProvider:
+    kReleaseMode ? AppleProvider.deviceCheck : AppleProvider.debug,
+    androidProvider:
+    kReleaseMode ? AndroidProvider.playIntegrity :
+    AndroidProvider.debug,
+  );
   runApp(
     ProviderScope(
       child: MyApp(),

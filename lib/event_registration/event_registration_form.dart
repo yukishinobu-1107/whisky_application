@@ -1,21 +1,28 @@
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Riverpodのインポート
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart'; // 圧縮用パッケージを追加
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../component/show_loading_dialog.dart';
 import '../constants/regions_and_prefectures.dart';
 import '../repositories/event_search_repository.dart';
+import '../view_model/navigation_notifier.dart'; // navigationProvider のインポート
 
-class EventRegistrationForm extends StatefulWidget {
+class EventRegistrationForm extends ConsumerStatefulWidget {
+  final Map<String, dynamic>? eventData;
+  final bool isEditMode;
+
+  const EventRegistrationForm({this.eventData, this.isEditMode = false});
+
   @override
   _EventRegistrationFormState createState() => _EventRegistrationFormState();
 }
 
-class _EventRegistrationFormState extends State<EventRegistrationForm> {
+class _EventRegistrationFormState extends ConsumerState<EventRegistrationForm> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _nameController = TextEditingController();
@@ -30,7 +37,9 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
   String _eventId = '';
   String? _selectedPrefecture;
   File? _coverImage;
+  String? _coverImageUrl;
   List<File> _selectedImages = [];
+  List<String> _existingOtherImageUrls = []; // 編集時のその他画像URLを保持
 
   final ImagePicker _picker = ImagePicker();
   final EventSearchRepository _eventSearchRepository = EventSearchRepository();
@@ -38,7 +47,26 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
   @override
   void initState() {
     super.initState();
-    _eventId = Uuid().v4();
+    if (widget.isEditMode && widget.eventData != null) {
+      _initializeWithEventData(widget.eventData!);
+    } else {
+      _eventId = Uuid().v4();
+    }
+  }
+
+  void _initializeWithEventData(Map<String, dynamic> eventData) {
+    _eventId = eventData['id'];
+    _nameController.text = eventData['name'];
+    _detailsController.text = eventData['address'];
+    _place.text = eventData['place'];
+    _urlController.text = eventData['eventUrl'] ?? '';
+    _selectedDate = (eventData['eventDate'] as Timestamp).toDate();
+    _selectedStartTime = TimeOfDay.fromDateTime(eventData['startTime'].toDate());
+    _selectedEndTime = TimeOfDay.fromDateTime(eventData['endTime'].toDate());
+    _selectedPrefecture = eventData['prefecture'];
+    _eventDateController.text = "${_selectedDate!.toLocal()}".split(' ')[0];
+    _coverImageUrl = eventData['coverImageUrl'];
+    _existingOtherImageUrls = List<String>.from(eventData['otherImageUrls'] ?? []);
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -110,11 +138,11 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
   }
 
   Future<void> _pickCoverImage() async {
-    final XFile? pickedFile =
-    await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _coverImage = File(pickedFile.path);
+        _coverImageUrl = null; // 新しい画像を選択したらURLをクリア
       });
     }
   }
@@ -123,8 +151,7 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
     final List<XFile>? pickedFiles = await _picker.pickMultiImage();
     if (pickedFiles != null) {
       setState(() {
-        _selectedImages
-            .addAll(pickedFiles.map((file) => File(file.path)).toList());
+        _selectedImages.addAll(pickedFiles.map((file) => File(file.path)).toList());
       });
     }
   }
@@ -163,10 +190,7 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
   }
 
   Future<void> _saveEventToFirestore() async {
-    // 現在のユーザーのuidを取得
     final String? uid = FirebaseAuth.instance.currentUser?.uid;
-
-    // UIDがnullの場合の処理
     if (uid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ユーザーが認証されていません')),
@@ -174,7 +198,7 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
       return;
     }
 
-    if (_coverImage == null) {
+    if (_coverImage == null && _coverImageUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('表紙画像を選択してください')),
       );
@@ -206,13 +230,17 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
     showLoadingDialog(context);
 
     try {
-      final compressedCoverImage = await compressImage(_coverImage!);
-      final coverImageUrl = await _uploadImage(
-        compressedCoverImage ?? _coverImage!,
-        'event_images/$_eventId/cover_image.jpg',
-      );
+      String? coverImageUrl = _coverImageUrl;
+      if (_coverImage != null) {
+        final compressedCoverImage = await compressImage(_coverImage!);
+        coverImageUrl = await _uploadImage(
+          compressedCoverImage ?? _coverImage!,
+          'event_images/$_eventId/cover_image.jpg',
+        );
+      }
 
       final otherImageUrls = await uploadImagesWithLimit(_selectedImages, 3);
+      final allOtherImageUrls = [..._existingOtherImageUrls, ...otherImageUrls];
 
       final eventData = {
         'id': _eventId,
@@ -222,46 +250,50 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
         'endTime': Timestamp.fromDate(endDateTime),
         'place': _place.text,
         'coverImageUrl': coverImageUrl,
-        'otherImageUrls': otherImageUrls,
+        'otherImageUrls': allOtherImageUrls,
         'address': _detailsController.text,
         'prefecture': _selectedPrefecture,
         'organizer': '主催者名',
         'eventType': 1,
         'eventUrl': _urlController.text,
-        'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
-        'isDeleted': false,
-        'uid': uid, // 登録者のuidを追加
+        'uid': uid,
       };
 
-      await _eventSearchRepository.saveEvent(eventData);
-      Navigator.of(context).pop(); // ローディング画面を閉じる
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('イベントが正常に登録されました')),
-      );
-      // event_search.dart画面に戻る
-      Navigator.of(context).pushReplacementNamed('/event_search');
+      if (widget.isEditMode) {
+        await _eventSearchRepository.updateEvent(eventData);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('イベントが更新されました')),
+        );
+      } else {
+        await _eventSearchRepository.saveEvent(eventData);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('イベントが正常に登録されました')),
+        );
+      }
+
+      // ナビゲーションバーのイベント情報画面に遷移
+      ref.read(navigationProvider.notifier).setIndex(1);
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
-      Navigator.of(context).pop(); // ローディング画面を閉じる
+      Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('イベントの登録に失敗しました: $e')),
+        SnackBar(content: Text('イベントの保存に失敗しました: $e')),
       );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          centerTitle: true,
-          title: const Text('イベント登録',
-              style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white)),
-          backgroundColor: Colors.black,
-          iconTheme: const IconThemeData(color: Colors.white)),
+        centerTitle: true,
+        title: Text(widget.isEditMode ? 'イベント編集' : 'イベント登録',
+            style: const TextStyle(
+                fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       backgroundColor: Colors.black,
       body: Container(
         padding: const EdgeInsets.all(16.0),
@@ -278,9 +310,6 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
                     color: Colors.white,
                     fontSize: 18.0,
                   ),
-                  hintText: 'イベント名を入力してください',
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
                 ),
                 style: const TextStyle(color: Colors.white),
               ),
@@ -390,8 +419,7 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
                 onTap: () {
                   _showPrefectureDropdown(context);
                 },
-                trailing:
-                const Icon(Icons.arrow_drop_down, color: Colors.white),
+                trailing: const Icon(Icons.arrow_drop_down, color: Colors.white),
               ),
               const Divider(color: Colors.grey),
               const SizedBox(height: 16.0),
@@ -421,10 +449,29 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
                     top: 0,
                     right: 0,
                     child: IconButton(
-                      icon: Icon(Icons.close, color: Colors.red),
+                      icon: const Icon(Icons.close, color: Colors.red),
                       onPressed: () {
                         setState(() {
                           _coverImage = null;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              )
+                  : _coverImageUrl != null
+                  ? Stack(
+                children: [
+                  Image.network(_coverImageUrl!,
+                      width: 100, height: 100, fit: BoxFit.cover),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: () {
+                        setState(() {
+                          _coverImageUrl = null;
                         });
                       },
                     ),
@@ -444,8 +491,7 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
               const SizedBox(height: 10),
               ElevatedButton.icon(
                 onPressed: _pickOtherImages,
-                icon:
-                const Icon(Icons.add_photo_alternate, color: Colors.white),
+                icon: const Icon(Icons.add_photo_alternate, color: Colors.white),
                 label: const Text(
                   '画像を選択',
                   style: TextStyle(color: Colors.white),
@@ -455,12 +501,29 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
                 ),
               ),
               const SizedBox(height: 10),
-              _selectedImages.isNotEmpty
-                  ? Wrap(
+              Wrap(
                 spacing: 8.0,
                 runSpacing: 8.0,
-                children: _selectedImages.map((image) {
-                  return Stack(
+                children: [
+                  ..._existingOtherImageUrls.map((url) => Stack(
+                    children: [
+                      Image.network(url,
+                          width: 100, height: 100, fit: BoxFit.cover),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              _existingOtherImageUrls.remove(url);
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  )),
+                  ..._selectedImages.map((image) => Stack(
                     children: [
                       Image.file(image,
                           width: 100, height: 100, fit: BoxFit.cover),
@@ -468,7 +531,7 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
                         top: 0,
                         right: 0,
                         child: IconButton(
-                          icon: Icon(Icons.close, color: Colors.red),
+                          icon: const Icon(Icons.close, color: Colors.red),
                           onPressed: () {
                             setState(() {
                               _selectedImages.remove(image);
@@ -477,12 +540,8 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
                         ),
                       ),
                     ],
-                  );
-                }).toList(),
-              )
-                  : const Text(
-                '選択された画像はありません',
-                style: TextStyle(color: Colors.grey),
+                  )),
+                ],
               ),
               const Divider(color: Colors.grey),
               const SizedBox(height: 32.0),
@@ -499,12 +558,12 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
                   ),
                   padding: const EdgeInsets.symmetric(
                       horizontal: 20.0, vertical: 12.0),
-                  minimumSize: Size(150, 40),
+                  minimumSize: const Size(150, 40),
                   elevation: 5,
                 ),
-                child: const Text(
-                  '登録',
-                  style: TextStyle(
+                child: Text(
+                  widget.isEditMode ? '更新' : '登録',
+                  style: const TextStyle(
                     fontSize: 16.0,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
