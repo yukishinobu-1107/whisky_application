@@ -1,14 +1,15 @@
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart'; // kReleaseModeを使用するために追加
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:whisky_application/event_registration/event_registration_form.dart';
 import 'package:whisky_application/firebase_options.dart';
+
 import 'event_search/event_search.dart';
 import 'home/home.dart';
 import 'login/auth_checker.dart';
 import 'navigation_bar/nav_bar.dart'; // LoginScreenをインポート
-import 'package:flutter/foundation.dart'; // kReleaseModeを使用するために追加
-import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,10 +17,9 @@ Future<void> main() async {
   // App Check を有効化
   await FirebaseAppCheck.instance.activate(
     appleProvider:
-    kReleaseMode ? AppleProvider.deviceCheck : AppleProvider.debug,
+        kReleaseMode ? AppleProvider.deviceCheck : AppleProvider.debug,
     androidProvider:
-    kReleaseMode ? AndroidProvider.playIntegrity :
-    AndroidProvider.debug,
+        kReleaseMode ? AndroidProvider.playIntegrity : AndroidProvider.debug,
   );
   runApp(
     ProviderScope(
@@ -36,7 +36,8 @@ class MyApp extends StatelessWidget {
       //initialRoute: '/',
       routes: {
         '/event_search': (context) => EventSearchPage(),
-        '/home': (context) => Home(),  // ここで'/home'ルートを定義
+        '/event_registration_form': (context) => EventRegistrationForm(),
+        '/home': (context) => Home(), // ここで'/home'ルートを定義
         '/NavBar': (context) => NavBar(),
       },
       title: 'Flutter Demo',
