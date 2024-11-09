@@ -14,77 +14,101 @@ T _$identity<T>(T value) => value;
 final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
-EventModel _$EventModelFromJson(Map<String, dynamic> json) {
-  return _EventModel.fromJson(json);
+Event _$EventFromJson(Map<String, dynamic> json) {
+  return _Event.fromJson(json);
 }
 
 /// @nodoc
-mixin _$EventModel {
+mixin _$Event {
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
-  String get details => throw _privateConstructorUsedError;
-  String get url => throw _privateConstructorUsedError;
+  @TimestampConverter()
   DateTime get eventDate => throw _privateConstructorUsedError;
-  List<String> get images => throw _privateConstructorUsedError;
-  String get eventPrefecture => throw _privateConstructorUsedError;
-  DateTime get createdAt => throw _privateConstructorUsedError; // createdAt 追加
-  DateTime get updatedAt => throw _privateConstructorUsedError; // updatedAt 追加
-  int get eventJoin => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime get startTime => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime get endTime => throw _privateConstructorUsedError;
+  String get place => throw _privateConstructorUsedError;
+  String get coverImageUrl => throw _privateConstructorUsedError;
+  List<String>? get otherImageUrls => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  @TimestampConverter()
+  DateTime get updatedAt => throw _privateConstructorUsedError;
+  bool get isDeleted => throw _privateConstructorUsedError;
+  String get address => throw _privateConstructorUsedError;
+  String get prefecture => throw _privateConstructorUsedError;
+  String get organizer => throw _privateConstructorUsedError;
+  int get eventType => throw _privateConstructorUsedError;
+  String? get eventUrl => throw _privateConstructorUsedError;
+  String get uid => throw _privateConstructorUsedError;
 
-  /// Serializes this EventModel to a JSON map.
+  /// Serializes this Event to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
-  /// Create a copy of EventModel
+  /// Create a copy of Event
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $EventModelCopyWith<EventModel> get copyWith =>
-      throw _privateConstructorUsedError;
+  $EventCopyWith<Event> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class $EventModelCopyWith<$Res> {
-  factory $EventModelCopyWith(
-          EventModel value, $Res Function(EventModel) then) =
-      _$EventModelCopyWithImpl<$Res, EventModel>;
+abstract class $EventCopyWith<$Res> {
+  factory $EventCopyWith(Event value, $Res Function(Event) then) =
+      _$EventCopyWithImpl<$Res, Event>;
   @useResult
   $Res call(
       {String id,
       String name,
-      String details,
-      String url,
-      DateTime eventDate,
-      List<String> images,
-      String eventPrefecture,
-      DateTime createdAt,
-      DateTime updatedAt,
-      int eventJoin});
+      @TimestampConverter() DateTime eventDate,
+      @TimestampConverter() DateTime startTime,
+      @TimestampConverter() DateTime endTime,
+      String place,
+      String coverImageUrl,
+      List<String>? otherImageUrls,
+      @TimestampConverter() DateTime createdAt,
+      @TimestampConverter() DateTime updatedAt,
+      bool isDeleted,
+      String address,
+      String prefecture,
+      String organizer,
+      int eventType,
+      String? eventUrl,
+      String uid});
 }
 
 /// @nodoc
-class _$EventModelCopyWithImpl<$Res, $Val extends EventModel>
-    implements $EventModelCopyWith<$Res> {
-  _$EventModelCopyWithImpl(this._value, this._then);
+class _$EventCopyWithImpl<$Res, $Val extends Event>
+    implements $EventCopyWith<$Res> {
+  _$EventCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
   final $Val _value;
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of EventModel
+  /// Create a copy of Event
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? details = null,
-    Object? url = null,
     Object? eventDate = null,
-    Object? images = null,
-    Object? eventPrefecture = null,
+    Object? startTime = null,
+    Object? endTime = null,
+    Object? place = null,
+    Object? coverImageUrl = null,
+    Object? otherImageUrls = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? eventJoin = null,
+    Object? isDeleted = null,
+    Object? address = null,
+    Object? prefecture = null,
+    Object? organizer = null,
+    Object? eventType = null,
+    Object? eventUrl = freezed,
+    Object? uid = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -95,26 +119,30 @@ class _$EventModelCopyWithImpl<$Res, $Val extends EventModel>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      details: null == details
-          ? _value.details
-          : details // ignore: cast_nullable_to_non_nullable
-              as String,
-      url: null == url
-          ? _value.url
-          : url // ignore: cast_nullable_to_non_nullable
-              as String,
       eventDate: null == eventDate
           ? _value.eventDate
           : eventDate // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      images: null == images
-          ? _value.images
-          : images // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      eventPrefecture: null == eventPrefecture
-          ? _value.eventPrefecture
-          : eventPrefecture // ignore: cast_nullable_to_non_nullable
+      startTime: null == startTime
+          ? _value.startTime
+          : startTime // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      endTime: null == endTime
+          ? _value.endTime
+          : endTime // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      place: null == place
+          ? _value.place
+          : place // ignore: cast_nullable_to_non_nullable
               as String,
+      coverImageUrl: null == coverImageUrl
+          ? _value.coverImageUrl
+          : coverImageUrl // ignore: cast_nullable_to_non_nullable
+              as String,
+      otherImageUrls: freezed == otherImageUrls
+          ? _value.otherImageUrls
+          : otherImageUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -123,60 +151,97 @@ class _$EventModelCopyWithImpl<$Res, $Val extends EventModel>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      eventJoin: null == eventJoin
-          ? _value.eventJoin
-          : eventJoin // ignore: cast_nullable_to_non_nullable
+      isDeleted: null == isDeleted
+          ? _value.isDeleted
+          : isDeleted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      address: null == address
+          ? _value.address
+          : address // ignore: cast_nullable_to_non_nullable
+              as String,
+      prefecture: null == prefecture
+          ? _value.prefecture
+          : prefecture // ignore: cast_nullable_to_non_nullable
+              as String,
+      organizer: null == organizer
+          ? _value.organizer
+          : organizer // ignore: cast_nullable_to_non_nullable
+              as String,
+      eventType: null == eventType
+          ? _value.eventType
+          : eventType // ignore: cast_nullable_to_non_nullable
               as int,
+      eventUrl: freezed == eventUrl
+          ? _value.eventUrl
+          : eventUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      uid: null == uid
+          ? _value.uid
+          : uid // ignore: cast_nullable_to_non_nullable
+              as String,
     ) as $Val);
   }
 }
 
 /// @nodoc
-abstract class _$$EventModelImplCopyWith<$Res>
-    implements $EventModelCopyWith<$Res> {
-  factory _$$EventModelImplCopyWith(
-          _$EventModelImpl value, $Res Function(_$EventModelImpl) then) =
-      __$$EventModelImplCopyWithImpl<$Res>;
+abstract class _$$EventImplCopyWith<$Res> implements $EventCopyWith<$Res> {
+  factory _$$EventImplCopyWith(
+          _$EventImpl value, $Res Function(_$EventImpl) then) =
+      __$$EventImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call(
       {String id,
       String name,
-      String details,
-      String url,
-      DateTime eventDate,
-      List<String> images,
-      String eventPrefecture,
-      DateTime createdAt,
-      DateTime updatedAt,
-      int eventJoin});
+      @TimestampConverter() DateTime eventDate,
+      @TimestampConverter() DateTime startTime,
+      @TimestampConverter() DateTime endTime,
+      String place,
+      String coverImageUrl,
+      List<String>? otherImageUrls,
+      @TimestampConverter() DateTime createdAt,
+      @TimestampConverter() DateTime updatedAt,
+      bool isDeleted,
+      String address,
+      String prefecture,
+      String organizer,
+      int eventType,
+      String? eventUrl,
+      String uid});
 }
 
 /// @nodoc
-class __$$EventModelImplCopyWithImpl<$Res>
-    extends _$EventModelCopyWithImpl<$Res, _$EventModelImpl>
-    implements _$$EventModelImplCopyWith<$Res> {
-  __$$EventModelImplCopyWithImpl(
-      _$EventModelImpl _value, $Res Function(_$EventModelImpl) _then)
+class __$$EventImplCopyWithImpl<$Res>
+    extends _$EventCopyWithImpl<$Res, _$EventImpl>
+    implements _$$EventImplCopyWith<$Res> {
+  __$$EventImplCopyWithImpl(
+      _$EventImpl _value, $Res Function(_$EventImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of EventModel
+  /// Create a copy of Event
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
     Object? id = null,
     Object? name = null,
-    Object? details = null,
-    Object? url = null,
     Object? eventDate = null,
-    Object? images = null,
-    Object? eventPrefecture = null,
+    Object? startTime = null,
+    Object? endTime = null,
+    Object? place = null,
+    Object? coverImageUrl = null,
+    Object? otherImageUrls = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
-    Object? eventJoin = null,
+    Object? isDeleted = null,
+    Object? address = null,
+    Object? prefecture = null,
+    Object? organizer = null,
+    Object? eventType = null,
+    Object? eventUrl = freezed,
+    Object? uid = null,
   }) {
-    return _then(_$EventModelImpl(
+    return _then(_$EventImpl(
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
@@ -185,26 +250,30 @@ class __$$EventModelImplCopyWithImpl<$Res>
           ? _value.name
           : name // ignore: cast_nullable_to_non_nullable
               as String,
-      details: null == details
-          ? _value.details
-          : details // ignore: cast_nullable_to_non_nullable
-              as String,
-      url: null == url
-          ? _value.url
-          : url // ignore: cast_nullable_to_non_nullable
-              as String,
       eventDate: null == eventDate
           ? _value.eventDate
           : eventDate // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      images: null == images
-          ? _value._images
-          : images // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      eventPrefecture: null == eventPrefecture
-          ? _value.eventPrefecture
-          : eventPrefecture // ignore: cast_nullable_to_non_nullable
+      startTime: null == startTime
+          ? _value.startTime
+          : startTime // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      endTime: null == endTime
+          ? _value.endTime
+          : endTime // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      place: null == place
+          ? _value.place
+          : place // ignore: cast_nullable_to_non_nullable
               as String,
+      coverImageUrl: null == coverImageUrl
+          ? _value.coverImageUrl
+          : coverImageUrl // ignore: cast_nullable_to_non_nullable
+              as String,
+      otherImageUrls: freezed == otherImageUrls
+          ? _value._otherImageUrls
+          : otherImageUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>?,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -213,87 +282,150 @@ class __$$EventModelImplCopyWithImpl<$Res>
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
-      eventJoin: null == eventJoin
-          ? _value.eventJoin
-          : eventJoin // ignore: cast_nullable_to_non_nullable
+      isDeleted: null == isDeleted
+          ? _value.isDeleted
+          : isDeleted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      address: null == address
+          ? _value.address
+          : address // ignore: cast_nullable_to_non_nullable
+              as String,
+      prefecture: null == prefecture
+          ? _value.prefecture
+          : prefecture // ignore: cast_nullable_to_non_nullable
+              as String,
+      organizer: null == organizer
+          ? _value.organizer
+          : organizer // ignore: cast_nullable_to_non_nullable
+              as String,
+      eventType: null == eventType
+          ? _value.eventType
+          : eventType // ignore: cast_nullable_to_non_nullable
               as int,
+      eventUrl: freezed == eventUrl
+          ? _value.eventUrl
+          : eventUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      uid: null == uid
+          ? _value.uid
+          : uid // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$EventModelImpl implements _EventModel {
-  const _$EventModelImpl(
+class _$EventImpl implements _Event {
+  const _$EventImpl(
       {required this.id,
       required this.name,
-      required this.details,
-      required this.url,
-      required this.eventDate,
-      required final List<String> images,
-      required this.eventPrefecture,
-      required this.createdAt,
-      required this.updatedAt,
-      required this.eventJoin})
-      : _images = images;
+      @TimestampConverter() required this.eventDate,
+      @TimestampConverter() required this.startTime,
+      @TimestampConverter() required this.endTime,
+      required this.place,
+      required this.coverImageUrl,
+      final List<String>? otherImageUrls,
+      @TimestampConverter() required this.createdAt,
+      @TimestampConverter() required this.updatedAt,
+      required this.isDeleted,
+      required this.address,
+      required this.prefecture,
+      required this.organizer,
+      required this.eventType,
+      this.eventUrl,
+      required this.uid})
+      : _otherImageUrls = otherImageUrls;
 
-  factory _$EventModelImpl.fromJson(Map<String, dynamic> json) =>
-      _$$EventModelImplFromJson(json);
+  factory _$EventImpl.fromJson(Map<String, dynamic> json) =>
+      _$$EventImplFromJson(json);
 
   @override
   final String id;
   @override
   final String name;
   @override
-  final String details;
-  @override
-  final String url;
-  @override
+  @TimestampConverter()
   final DateTime eventDate;
-  final List<String> _images;
   @override
-  List<String> get images {
-    if (_images is EqualUnmodifiableListView) return _images;
+  @TimestampConverter()
+  final DateTime startTime;
+  @override
+  @TimestampConverter()
+  final DateTime endTime;
+  @override
+  final String place;
+  @override
+  final String coverImageUrl;
+  final List<String>? _otherImageUrls;
+  @override
+  List<String>? get otherImageUrls {
+    final value = _otherImageUrls;
+    if (value == null) return null;
+    if (_otherImageUrls is EqualUnmodifiableListView) return _otherImageUrls;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_images);
+    return EqualUnmodifiableListView(value);
   }
 
   @override
-  final String eventPrefecture;
-  @override
+  @TimestampConverter()
   final DateTime createdAt;
-// createdAt 追加
   @override
+  @TimestampConverter()
   final DateTime updatedAt;
-// updatedAt 追加
   @override
-  final int eventJoin;
+  final bool isDeleted;
+  @override
+  final String address;
+  @override
+  final String prefecture;
+  @override
+  final String organizer;
+  @override
+  final int eventType;
+  @override
+  final String? eventUrl;
+  @override
+  final String uid;
 
   @override
   String toString() {
-    return 'EventModel(id: $id, name: $name, details: $details, url: $url, eventDate: $eventDate, images: $images, eventPrefecture: $eventPrefecture, createdAt: $createdAt, updatedAt: $updatedAt, eventJoin: $eventJoin)';
+    return 'Event(id: $id, name: $name, eventDate: $eventDate, startTime: $startTime, endTime: $endTime, place: $place, coverImageUrl: $coverImageUrl, otherImageUrls: $otherImageUrls, createdAt: $createdAt, updatedAt: $updatedAt, isDeleted: $isDeleted, address: $address, prefecture: $prefecture, organizer: $organizer, eventType: $eventType, eventUrl: $eventUrl, uid: $uid)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$EventModelImpl &&
+            other is _$EventImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.details, details) || other.details == details) &&
-            (identical(other.url, url) || other.url == url) &&
             (identical(other.eventDate, eventDate) ||
                 other.eventDate == eventDate) &&
-            const DeepCollectionEquality().equals(other._images, _images) &&
-            (identical(other.eventPrefecture, eventPrefecture) ||
-                other.eventPrefecture == eventPrefecture) &&
+            (identical(other.startTime, startTime) ||
+                other.startTime == startTime) &&
+            (identical(other.endTime, endTime) || other.endTime == endTime) &&
+            (identical(other.place, place) || other.place == place) &&
+            (identical(other.coverImageUrl, coverImageUrl) ||
+                other.coverImageUrl == coverImageUrl) &&
+            const DeepCollectionEquality()
+                .equals(other._otherImageUrls, _otherImageUrls) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.eventJoin, eventJoin) ||
-                other.eventJoin == eventJoin));
+            (identical(other.isDeleted, isDeleted) ||
+                other.isDeleted == isDeleted) &&
+            (identical(other.address, address) || other.address == address) &&
+            (identical(other.prefecture, prefecture) ||
+                other.prefecture == prefecture) &&
+            (identical(other.organizer, organizer) ||
+                other.organizer == organizer) &&
+            (identical(other.eventType, eventType) ||
+                other.eventType == eventType) &&
+            (identical(other.eventUrl, eventUrl) ||
+                other.eventUrl == eventUrl) &&
+            (identical(other.uid, uid) || other.uid == uid));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -302,72 +434,104 @@ class _$EventModelImpl implements _EventModel {
       runtimeType,
       id,
       name,
-      details,
-      url,
       eventDate,
-      const DeepCollectionEquality().hash(_images),
-      eventPrefecture,
+      startTime,
+      endTime,
+      place,
+      coverImageUrl,
+      const DeepCollectionEquality().hash(_otherImageUrls),
       createdAt,
       updatedAt,
-      eventJoin);
+      isDeleted,
+      address,
+      prefecture,
+      organizer,
+      eventType,
+      eventUrl,
+      uid);
 
-  /// Create a copy of EventModel
+  /// Create a copy of Event
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
-  _$$EventModelImplCopyWith<_$EventModelImpl> get copyWith =>
-      __$$EventModelImplCopyWithImpl<_$EventModelImpl>(this, _$identity);
+  _$$EventImplCopyWith<_$EventImpl> get copyWith =>
+      __$$EventImplCopyWithImpl<_$EventImpl>(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$EventModelImplToJson(
+    return _$$EventImplToJson(
       this,
     );
   }
 }
 
-abstract class _EventModel implements EventModel {
-  const factory _EventModel(
+abstract class _Event implements Event {
+  const factory _Event(
       {required final String id,
       required final String name,
-      required final String details,
-      required final String url,
-      required final DateTime eventDate,
-      required final List<String> images,
-      required final String eventPrefecture,
-      required final DateTime createdAt,
-      required final DateTime updatedAt,
-      required final int eventJoin}) = _$EventModelImpl;
+      @TimestampConverter() required final DateTime eventDate,
+      @TimestampConverter() required final DateTime startTime,
+      @TimestampConverter() required final DateTime endTime,
+      required final String place,
+      required final String coverImageUrl,
+      final List<String>? otherImageUrls,
+      @TimestampConverter() required final DateTime createdAt,
+      @TimestampConverter() required final DateTime updatedAt,
+      required final bool isDeleted,
+      required final String address,
+      required final String prefecture,
+      required final String organizer,
+      required final int eventType,
+      final String? eventUrl,
+      required final String uid}) = _$EventImpl;
 
-  factory _EventModel.fromJson(Map<String, dynamic> json) =
-      _$EventModelImpl.fromJson;
+  factory _Event.fromJson(Map<String, dynamic> json) = _$EventImpl.fromJson;
 
   @override
   String get id;
   @override
   String get name;
   @override
-  String get details;
-  @override
-  String get url;
-  @override
+  @TimestampConverter()
   DateTime get eventDate;
   @override
-  List<String> get images;
+  @TimestampConverter()
+  DateTime get startTime;
   @override
-  String get eventPrefecture;
+  @TimestampConverter()
+  DateTime get endTime;
   @override
-  DateTime get createdAt; // createdAt 追加
+  String get place;
   @override
-  DateTime get updatedAt; // updatedAt 追加
+  String get coverImageUrl;
   @override
-  int get eventJoin;
+  List<String>? get otherImageUrls;
+  @override
+  @TimestampConverter()
+  DateTime get createdAt;
+  @override
+  @TimestampConverter()
+  DateTime get updatedAt;
+  @override
+  bool get isDeleted;
+  @override
+  String get address;
+  @override
+  String get prefecture;
+  @override
+  String get organizer;
+  @override
+  int get eventType;
+  @override
+  String? get eventUrl;
+  @override
+  String get uid;
 
-  /// Create a copy of EventModel
+  /// Create a copy of Event
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$EventModelImplCopyWith<_$EventModelImpl> get copyWith =>
+  _$$EventImplCopyWith<_$EventImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

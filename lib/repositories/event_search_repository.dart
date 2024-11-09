@@ -1,33 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:whisky_application/model/event_model.dart';
 
 class EventSearchRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Firestore からイベントデータを取得するメソッド
-  Future<List<Map<String, dynamic>>> fetchEvents() async {
+  // Firestoreからイベントデータを取得
+  Future<List<Event>> fetchEvents() async {
     try {
       QuerySnapshot snapshot = await _firestore.collection('events').get();
 
+      // FirestoreドキュメントをEventモデルのリストに変換
       return snapshot.docs.map((doc) {
-        return {
-          'id': doc.id,
-          'name': doc['name'],
-          'eventDate': doc['eventDate'],
-          'startTime': doc['startTime'],
-          'endTime': doc['endTime'],
-          'place': doc['place'],
-          'coverImageUrl': doc['coverImageUrl'], // 表紙画像URL
-          'otherImageUrls': List<String>.from(doc['otherImageUrls'] ?? []), // その他画像URLリスト
-          'createdAt': doc['createdAt'],
-          'updatedAt': doc['updatedAt'],
-          'isDeleted': doc['isDeleted'],
-          'address': doc['address'],
-          'prefecture': doc['prefecture'],
-          'organizer': doc['organizer'],
-          'eventType': doc['eventType'],
-          'eventUrl': doc['eventUrl'],
-          'uid': doc['uid']
-        };
+        return Event.fromJson({
+          'id': doc.id, // FirestoreのドキュメントIDをidに設定
+          ...doc.data() as Map<String, dynamic>, // 残りのフィールドを追加
+        });
       }).toList();
     } catch (e) {
       print('データの取得に失敗しました: $e');
@@ -35,31 +22,14 @@ class EventSearchRepository {
     }
   }
 
-  // Firestore にイベントデータを保存するメソッド
+  // Firestoreにイベントデータを保存 (Map型を受け取る)
   Future<void> saveEvent(Map<String, dynamic> eventData) async {
     try {
-      // ドキュメントIDを生成（既存のIDがある場合は上書き）
-      String eventId = eventData['id'] ?? _firestore.collection('events').doc().id;
+      String eventId =
+          eventData['id'] ?? _firestore.collection('events').doc().id;
 
-      // Firestoreの 'events' コレクションにデータを保存
-      await _firestore.collection('events').doc(eventId).set({
-        'name': eventData['name'],
-        'eventDate': eventData['eventDate'],
-        'startTime': eventData['startTime'],
-        'endTime': eventData['endTime'],
-        'place': eventData['place'],
-        'coverImageUrl': eventData['coverImageUrl'], // 表紙画像URL
-        'otherImageUrls': eventData['otherImageUrls'], // その他画像URLリスト
-        'createdAt': eventData['createdAt'] ?? FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(), // 更新日時
-        'isDeleted': eventData['isDeleted'] ?? false, // デフォルトで削除されていない
-        'address': eventData['address'],
-        'prefecture': eventData['prefecture'],
-        'organizer': eventData['organizer'],
-        'eventType': eventData['eventType'],
-        'eventUrl': eventData['eventUrl'],
-        'uid': eventData['uid']
-      });
+      // Map形式のデータを直接Firestoreに保存
+      await _firestore.collection('events').doc(eventId).set(eventData);
 
       print('イベントが正常に保存されました');
     } catch (e) {
@@ -68,27 +38,13 @@ class EventSearchRepository {
     }
   }
 
-  // Firestore のイベントデータを更新するメソッド
-  Future<void> updateEvent(Map<String, dynamic> eventData) async {
+  // Firestoreのイベントデータを更新
+  Future<void> updateEvent(Event event) async {
     try {
-      // ドキュメントIDを取得し、Firestore の 'events' コレクション内で更新
-      String eventId = eventData['id'];
-      await _firestore.collection('events').doc(eventId).update({
-        'name': eventData['name'],
-        'eventDate': eventData['eventDate'],
-        'startTime': eventData['startTime'],
-        'endTime': eventData['endTime'],
-        'place': eventData['place'],
-        'coverImageUrl': eventData['coverImageUrl'],
-        'otherImageUrls': eventData['otherImageUrls'],
-        'updatedAt': FieldValue.serverTimestamp(), // 更新日時
-        'address': eventData['address'],
-        'prefecture': eventData['prefecture'],
-        'organizer': eventData['organizer'],
-        'eventType': eventData['eventType'],
-        'eventUrl': eventData['eventUrl'],
-        'uid': eventData['uid']
-      });
+      await _firestore
+          .collection('events')
+          .doc(event.id)
+          .update(event.toJson());
       print('イベントが正常に更新されました');
     } catch (e) {
       print('イベントの更新に失敗しました: $e');
@@ -96,7 +52,7 @@ class EventSearchRepository {
     }
   }
 
-  // Firestore からイベントデータを削除するメソッド
+  // Firestoreからイベントデータを削除
   Future<void> deleteEvent(String eventId) async {
     try {
       await _firestore.collection('events').doc(eventId).delete();
