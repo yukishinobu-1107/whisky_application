@@ -1,10 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthのインポート
+
 import '../constants/regions_and_prefectures.dart';
 import '../event_registration/event_registration_form.dart';
+import '../repositories/event_search_repository.dart';
 import '../view_model/event_search_view_model.dart';
-
 import 'event_card.dart';
 
 class EventSearchPage extends ConsumerStatefulWidget {
@@ -14,11 +15,11 @@ class EventSearchPage extends ConsumerStatefulWidget {
 
 class _EventSearchPageState extends ConsumerState<EventSearchPage> {
   String? _selectedPrefecture = '東京都'; // 選択された都道府県を保持
+  final EventSearchRepository _eventSearchRepository = EventSearchRepository();
 
   @override
   void initState() {
     super.initState();
-    // 初期表示時に全イベントを取得
     Future.microtask(() => ref
         .read(eventSearchProvider.notifier)
         .fetchEvents(_selectedPrefecture));
@@ -59,7 +60,7 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
   @override
   Widget build(BuildContext context) {
     final eventList = ref.watch(eventSearchProvider); // List<Event> 型
-    final uid = FirebaseAuth.instance.currentUser?.uid; // 現在のユーザーIDを取得
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
       appBar: AppBar(
@@ -73,10 +74,8 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => EventRegistrationForm()));
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => EventRegistrationForm()));
             },
             icon: Icon(Icons.add, color: Colors.yellowAccent, size: 36),
           ),
@@ -100,35 +99,36 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
                 side: BorderSide(color: Colors.orangeAccent, width: 2),
               ),
               trailing:
-              const Icon(Icons.arrow_drop_down, color: Colors.orangeAccent),
+                  const Icon(Icons.arrow_drop_down, color: Colors.orangeAccent),
             ),
           ),
           Expanded(
             child: eventList.isEmpty
                 ? Center(
-              child: Text(
-                'イベントが見つかりません',
-                style: TextStyle(color: Colors.white70, fontSize: 18),
-              ),
-            )
+                    child: Text(
+                      'イベントが見つかりません',
+                      style: TextStyle(color: Colors.white70, fontSize: 18),
+                    ),
+                  )
                 : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ListView.builder(
-                itemCount: eventList.length,
-                itemBuilder: (context, index) {
-                  final event = eventList[index]; // Event 型
-                  return EventCard(
-                    event: event, // Eventインスタンスをそのまま渡す
-                    uid: uid ?? '', // uidがnullの場合に空文字列を指定
-                    onDelete: () async {
-                      await ref
-                          .read(eventSearchProvider.notifier)
-                          .fetchEvents(_selectedPrefecture);
-                    },
-                  );
-                },
-              ),
-            ),
+                    padding: const EdgeInsets.all(16.0),
+                    child: ListView.builder(
+                      itemCount: eventList.length,
+                      itemBuilder: (context, index) {
+                        final event = eventList[index];
+                        return EventCard(
+                          event: event,
+                          uid: uid ?? '',
+                          repository: _eventSearchRepository,
+                          onDelete: () async {
+                            await ref
+                                .read(eventSearchProvider.notifier)
+                                .fetchEvents(_selectedPrefecture);
+                          },
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),

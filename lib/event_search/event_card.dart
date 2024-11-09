@@ -1,19 +1,30 @@
-import 'package:flutter/cupertino.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../model/event_model.dart';
+import '../repositories/event_search_repository.dart';
 
 class EventCard extends StatelessWidget {
-  final Event event; // 型をEventに変更
+  final Event event;
+  final EventSearchRepository repository; // リポジトリを追加
+  final VoidCallback onDelete; // 削除後の画面リフレッシュ用コールバック
 
-  const EventCard({required this.event, required Future<Null> Function() onDelete, required String uid});
+  const EventCard({
+    Key? key,
+    required this.event,
+    required this.repository,
+    required this.onDelete,
+    required String uid,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    print(event.toJson());
-    int eventType = event.eventType;
+    final String currentUserUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    // イベントタイプに応じた色とスタイルを決定
+    // イベントタイプによるカードデザインの設定
+    int eventType = event.eventType;
     Color backgroundColor;
     Color borderColor;
     String eventTypeLabel;
@@ -28,7 +39,6 @@ class EventCard extends StatelessWidget {
         borderColor = Colors.orangeAccent;
         eventTypeLabel = "企業/団体イベント";
         break;
-      case 2:
       default:
         backgroundColor = Colors.green[700]!;
         borderColor = Colors.transparent;
@@ -36,7 +46,6 @@ class EventCard extends StatelessWidget {
         break;
     }
 
-    // 開始時間と終了時間を取得してフォーマット
     final startTime = DateFormat('HH:mm').format(event.startTime);
     final endTime = DateFormat('HH:mm').format(event.endTime);
 
@@ -53,101 +62,177 @@ class EventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(
-                'assets/event2.jpg',
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    event.coverImageUrl,
+                    height: 150,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                if (event.uid == currentUserUid) // ユーザーのイベントにのみ表示
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: Colors.white),
+                      onSelected: (String result) {
+                        if (result == 'edit') {
+                          // 編集処理
+                          Navigator.pushNamed(
+                              context, '/event_registration_form',
+                              arguments: event);
+                        } else if (result == 'delete') {
+                          // 削除処理
+                          _showDeleteConfirmation(context);
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        const PopupMenuItem<String>(
+                          value: 'edit',
+                          child: Text('編集'),
+                        ),
+                        const PopupMenuItem<String>(
+                          value: 'delete',
+                          child:
+                              Text('削除', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Text(
               event.name,
               style: TextStyle(
                 fontSize: eventType == 1 ? 24 : 20,
-                fontWeight: eventType == 1 ? FontWeight.bold : FontWeight.normal,
+                fontWeight:
+                    eventType == 1 ? FontWeight.bold : FontWeight.normal,
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.calendar_today, color: Colors.orangeAccent, size: 16),
-                SizedBox(width: 5),
+                const Icon(Icons.calendar_today,
+                    color: Colors.orangeAccent, size: 16),
+                const SizedBox(width: 5),
                 Text(
                   DateFormat('yyyy/MM/dd').format(event.eventDate),
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             Row(
               children: [
-                Icon(Icons.access_time, color: Colors.orangeAccent, size: 16),
-                SizedBox(width: 5),
+                const Icon(Icons.access_time,
+                    color: Colors.orangeAccent, size: 16),
+                const SizedBox(width: 5),
                 Text(
                   '時間: $startTime - $endTime',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             Row(
               children: [
-                Icon(Icons.person, color: Colors.orangeAccent, size: 16),
-                SizedBox(width: 5),
+                const Icon(Icons.person, color: Colors.orangeAccent, size: 16),
+                const SizedBox(width: 5),
                 Text(
                   '主催者: ${event.organizer}',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             Row(
               children: [
-                Icon(Icons.location_on, color: Colors.orangeAccent, size: 16),
-                SizedBox(width: 5),
+                const Icon(Icons.location_on,
+                    color: Colors.orangeAccent, size: 16),
+                const SizedBox(width: 5),
                 Text(
                   '場所: ${event.address}',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               eventTypeLabel,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.orangeAccent,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: () {
-                  // イベント詳細ページへの遷移
-                },
-                child: Text('詳細を見る'),
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: eventType == 1 ? Colors.white : Colors.black,
-                  backgroundColor: eventType == 1 ? Colors.orangeAccent : Colors.grey,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: eventType == 1 ? 30 : 20,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // 削除確認ダイアログの表示
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('イベントの削除'),
+          content: const Text('このイベントを削除してもよろしいですか？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('キャンセル'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('削除', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    // ダイアログで削除が確認された場合
+    if (result == true) {
+      try {
+        // Firebase Storageからカバー画像を削除
+        if (event.coverImageUrl.isNotEmpty) {
+          final coverImageRef =
+              FirebaseStorage.instance.refFromURL(event.coverImageUrl);
+          await coverImageRef.delete();
+        }
+
+        // Firebase Storageからその他の画像を削除
+        if (event.otherImageUrls != null) {
+          // otherImageUrlsがnullか確認
+          for (String imageUrl in event.otherImageUrls!) {
+            if (imageUrl.isNotEmpty) {
+              final imageRef = FirebaseStorage.instance.refFromURL(imageUrl);
+              await imageRef.delete();
+            }
+          }
+        }
+
+        // Firestoreからイベントデータを削除
+        await repository.deleteEvent(event.id);
+
+        // 削除後の更新通知
+        onDelete();
+      } catch (e) {
+        print('エラー: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('イベントの削除に失敗しました: $e')),
+        );
+      }
+    }
   }
 }

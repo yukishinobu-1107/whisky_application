@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:whisky_application/model/event_model.dart';
 
 class EventSearchRepository {
@@ -59,6 +60,27 @@ class EventSearchRepository {
       print('イベントが正常に削除されました');
     } catch (e) {
       print('イベントの削除に失敗しました: $e');
+      throw Exception('イベントの削除に失敗しました');
+    }
+  }
+
+  Future<void> deleteEventWithImages(
+      String eventId, List<String> imageUrls) async {
+    try {
+      // Firestoreからイベントデータを削除
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(eventId)
+          .delete();
+
+      // ストレージから画像を削除
+      for (String url in imageUrls) {
+        await FirebaseStorage.instance.refFromURL(url).delete();
+      }
+
+      print('イベントと関連画像が正常に削除されました');
+    } catch (e) {
+      print('イベント削除に失敗しました: $e');
       throw Exception('イベントの削除に失敗しました');
     }
   }
