@@ -6,31 +6,50 @@ part of 'event_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$EventModelImpl _$$EventModelImplFromJson(Map<String, dynamic> json) =>
-    _$EventModelImpl(
+_$EventImpl _$$EventImplFromJson(Map<String, dynamic> json) => _$EventImpl(
       id: json['id'] as String,
       name: json['name'] as String,
-      details: json['details'] as String,
-      url: json['url'] as String,
-      eventDate: DateTime.parse(json['eventDate'] as String),
-      images:
-          (json['images'] as List<dynamic>).map((e) => e as String).toList(),
-      eventPrefecture: json['eventPrefecture'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      eventJoin: (json['eventJoin'] as num).toInt(),
+      eventDate:
+          const TimestampConverter().fromJson(json['eventDate'] as Timestamp),
+      startTime:
+          const TimestampConverter().fromJson(json['startTime'] as Timestamp),
+      endTime:
+          const TimestampConverter().fromJson(json['endTime'] as Timestamp),
+      place: json['place'] as String,
+      coverImageUrl: json['coverImageUrl'] as String,
+      otherImageUrls: (json['otherImageUrls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      createdAt:
+          const TimestampConverter().fromJson(json['createdAt'] as Timestamp),
+      updatedAt:
+          const TimestampConverter().fromJson(json['updatedAt'] as Timestamp),
+      isDeleted: json['isDeleted'] as bool,
+      address: json['address'] as String,
+      prefecture: json['prefecture'] as String,
+      organizer: json['organizer'] as String,
+      eventType: (json['eventType'] as num).toInt(),
+      eventUrl: json['eventUrl'] as String?,
+      uid: json['uid'] as String,
     );
 
-Map<String, dynamic> _$$EventModelImplToJson(_$EventModelImpl instance) =>
+Map<String, dynamic> _$$EventImplToJson(_$EventImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
-      'details': instance.details,
-      'url': instance.url,
-      'eventDate': instance.eventDate.toIso8601String(),
-      'images': instance.images,
-      'eventPrefecture': instance.eventPrefecture,
-      'createdAt': instance.createdAt.toIso8601String(),
-      'updatedAt': instance.updatedAt.toIso8601String(),
-      'eventJoin': instance.eventJoin,
+      'eventDate': const TimestampConverter().toJson(instance.eventDate),
+      'startTime': const TimestampConverter().toJson(instance.startTime),
+      'endTime': const TimestampConverter().toJson(instance.endTime),
+      'place': instance.place,
+      'coverImageUrl': instance.coverImageUrl,
+      'otherImageUrls': instance.otherImageUrls,
+      'createdAt': const TimestampConverter().toJson(instance.createdAt),
+      'updatedAt': const TimestampConverter().toJson(instance.updatedAt),
+      'isDeleted': instance.isDeleted,
+      'address': instance.address,
+      'prefecture': instance.prefecture,
+      'organizer': instance.organizer,
+      'eventType': instance.eventType,
+      'eventUrl': instance.eventUrl,
+      'uid': instance.uid,
     };

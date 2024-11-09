@@ -4,37 +4,38 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'event_model.freezed.dart';
 part 'event_model.g.dart';
 
+// TimestampとDateTimeを相互変換するためのコンバーター
+class TimestampConverter implements JsonConverter<DateTime, Timestamp> {
+  const TimestampConverter();
+
+  @override
+  DateTime fromJson(Timestamp timestamp) => timestamp.toDate();
+
+  @override
+  Timestamp toJson(DateTime date) => Timestamp.fromDate(date);
+}
+
 @freezed
-class EventModel with _$EventModel {
-  const factory EventModel({
+class Event with _$Event {
+  const factory Event({
     required String id,
     required String name,
-    required String details,
-    required String url,
-    required DateTime eventDate,
-    required List<String> images,
-    required String eventPrefecture,
-    required DateTime createdAt, // createdAt 追加
-    required DateTime updatedAt, // updatedAt 追加
-    required int eventJoin,
-  }) = _EventModel;
+    @TimestampConverter() required DateTime eventDate,
+    @TimestampConverter() required DateTime startTime,
+    @TimestampConverter() required DateTime endTime,
+    required String place,
+    required String coverImageUrl,
+    List<String>? otherImageUrls,
+    @TimestampConverter() required DateTime createdAt,
+    @TimestampConverter() required DateTime updatedAt,
+    required bool isDeleted,
+    required String address,
+    required String prefecture,
+    required String organizer,
+    required int eventType,
+    String? eventUrl,
+    required String uid,
+  }) = _Event;
 
-  factory EventModel.fromJson(Map<String, dynamic> json) =>
-      _$EventModelFromJson(json);
-
-  factory EventModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return EventModel(
-      id: doc.id,
-      name: data['eventName'] ?? '',
-      details: data['eventDetails'] ?? '',
-      url: data['eventUrl'] ?? '',
-      eventDate: (data['eventDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      images: List<String>.from(data['eventImages'] ?? []),
-      eventPrefecture: data['eventPrefecture'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      eventJoin: data['eventJoin'] ?? 0, // eventJoin の初期値を 0 に設定
-    );
-  }
+  factory Event.fromJson(Map<String, dynamic> json) => _$EventFromJson(json);
 }

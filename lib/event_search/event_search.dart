@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuthのインポ�
 import '../constants/regions_and_prefectures.dart';
 import '../event_registration/event_registration_form.dart';
 import '../view_model/event_search_view_model.dart';
+
 import 'event_card.dart';
 
 class EventSearchPage extends ConsumerStatefulWidget {
@@ -57,7 +58,7 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final eventList = ref.watch(eventSearchProvider);
+    final eventList = ref.watch(eventSearchProvider); // List<Event> 型
     final uid = FirebaseAuth.instance.currentUser?.uid; // 現在のユーザーIDを取得
 
     return Scaffold(
@@ -115,9 +116,9 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
               child: ListView.builder(
                 itemCount: eventList.length,
                 itemBuilder: (context, index) {
-                  final event = eventList[index];
+                  final event = eventList[index]; // Event 型
                   return EventCard(
-                    event: event,
+                    event: event, // Eventインスタンスをそのまま渡す
                     uid: uid ?? '', // uidがnullの場合に空文字列を指定
                     onDelete: () async {
                       await ref
