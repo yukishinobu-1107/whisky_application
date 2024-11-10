@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 class SaveButton extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final Future<void> Function() onSave; // 非同期の保存処理
+  final String buttonText; // ボタンのラベルを指定可能
 
-  const SaveButton({required this.formKey, required this.onSave});
+  const SaveButton({
+    required this.formKey,
+    required this.onSave,
+    this.buttonText = '登録', // デフォルトのラベルを登録に設定
+  });
 
   @override
   _SaveButtonState createState() => _SaveButtonState();
@@ -45,9 +50,9 @@ class _SaveButtonState extends State<SaveButton> {
           ? const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             )
-          : const Text(
-              '登録',
-              style: TextStyle(
+          : Text(
+              widget.buttonText,
+              style: const TextStyle(
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,

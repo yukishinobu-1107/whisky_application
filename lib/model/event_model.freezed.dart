@@ -36,7 +36,8 @@ mixin _$Event {
   @TimestampConverter()
   DateTime get updatedAt => throw _privateConstructorUsedError;
   bool get isDeleted => throw _privateConstructorUsedError;
-  String get address => throw _privateConstructorUsedError;
+  String get address => throw _privateConstructorUsedError; // 既存の住所フィールド
+  String get details => throw _privateConstructorUsedError; // 追加するイベント詳細のフィールド
   String get prefecture => throw _privateConstructorUsedError;
   String get organizer => throw _privateConstructorUsedError;
   int get eventType => throw _privateConstructorUsedError;
@@ -70,6 +71,7 @@ abstract class $EventCopyWith<$Res> {
       @TimestampConverter() DateTime updatedAt,
       bool isDeleted,
       String address,
+      String details,
       String prefecture,
       String organizer,
       int eventType,
@@ -104,6 +106,7 @@ class _$EventCopyWithImpl<$Res, $Val extends Event>
     Object? updatedAt = null,
     Object? isDeleted = null,
     Object? address = null,
+    Object? details = null,
     Object? prefecture = null,
     Object? organizer = null,
     Object? eventType = null,
@@ -159,6 +162,10 @@ class _$EventCopyWithImpl<$Res, $Val extends Event>
           ? _value.address
           : address // ignore: cast_nullable_to_non_nullable
               as String,
+      details: null == details
+          ? _value.details
+          : details // ignore: cast_nullable_to_non_nullable
+              as String,
       prefecture: null == prefecture
           ? _value.prefecture
           : prefecture // ignore: cast_nullable_to_non_nullable
@@ -203,6 +210,7 @@ abstract class _$$EventImplCopyWith<$Res> implements $EventCopyWith<$Res> {
       @TimestampConverter() DateTime updatedAt,
       bool isDeleted,
       String address,
+      String details,
       String prefecture,
       String organizer,
       int eventType,
@@ -235,6 +243,7 @@ class __$$EventImplCopyWithImpl<$Res>
     Object? updatedAt = null,
     Object? isDeleted = null,
     Object? address = null,
+    Object? details = null,
     Object? prefecture = null,
     Object? organizer = null,
     Object? eventType = null,
@@ -290,6 +299,10 @@ class __$$EventImplCopyWithImpl<$Res>
           ? _value.address
           : address // ignore: cast_nullable_to_non_nullable
               as String,
+      details: null == details
+          ? _value.details
+          : details // ignore: cast_nullable_to_non_nullable
+              as String,
       prefecture: null == prefecture
           ? _value.prefecture
           : prefecture // ignore: cast_nullable_to_non_nullable
@@ -330,6 +343,7 @@ class _$EventImpl implements _Event {
       @TimestampConverter() required this.updatedAt,
       required this.isDeleted,
       required this.address,
+      required this.details,
       required this.prefecture,
       required this.organizer,
       required this.eventType,
@@ -377,6 +391,10 @@ class _$EventImpl implements _Event {
   final bool isDeleted;
   @override
   final String address;
+// 既存の住所フィールド
+  @override
+  final String details;
+// 追加するイベント詳細のフィールド
   @override
   final String prefecture;
   @override
@@ -390,7 +408,7 @@ class _$EventImpl implements _Event {
 
   @override
   String toString() {
-    return 'Event(id: $id, name: $name, eventDate: $eventDate, startTime: $startTime, endTime: $endTime, place: $place, coverImageUrl: $coverImageUrl, otherImageUrls: $otherImageUrls, createdAt: $createdAt, updatedAt: $updatedAt, isDeleted: $isDeleted, address: $address, prefecture: $prefecture, organizer: $organizer, eventType: $eventType, eventUrl: $eventUrl, uid: $uid)';
+    return 'Event(id: $id, name: $name, eventDate: $eventDate, startTime: $startTime, endTime: $endTime, place: $place, coverImageUrl: $coverImageUrl, otherImageUrls: $otherImageUrls, createdAt: $createdAt, updatedAt: $updatedAt, isDeleted: $isDeleted, address: $address, details: $details, prefecture: $prefecture, organizer: $organizer, eventType: $eventType, eventUrl: $eventUrl, uid: $uid)';
   }
 
   @override
@@ -417,6 +435,7 @@ class _$EventImpl implements _Event {
             (identical(other.isDeleted, isDeleted) ||
                 other.isDeleted == isDeleted) &&
             (identical(other.address, address) || other.address == address) &&
+            (identical(other.details, details) || other.details == details) &&
             (identical(other.prefecture, prefecture) ||
                 other.prefecture == prefecture) &&
             (identical(other.organizer, organizer) ||
@@ -444,6 +463,7 @@ class _$EventImpl implements _Event {
       updatedAt,
       isDeleted,
       address,
+      details,
       prefecture,
       organizer,
       eventType,
@@ -480,6 +500,7 @@ abstract class _Event implements Event {
       @TimestampConverter() required final DateTime updatedAt,
       required final bool isDeleted,
       required final String address,
+      required final String details,
       required final String prefecture,
       required final String organizer,
       required final int eventType,
@@ -516,7 +537,9 @@ abstract class _Event implements Event {
   @override
   bool get isDeleted;
   @override
-  String get address;
+  String get address; // 既存の住所フィールド
+  @override
+  String get details; // 追加するイベント詳細のフィールド
   @override
   String get prefecture;
   @override

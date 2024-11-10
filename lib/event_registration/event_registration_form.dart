@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -9,10 +10,13 @@ import 'package:uuid/uuid.dart';
 import '../constants/regions_and_prefectures.dart';
 import '../model/event_model.dart';
 import '../repositories/event_search_repository.dart';
-import 'event_form_methods.dart';
 import 'save_button.dart';
 
 class EventRegistrationForm extends StatefulWidget {
+  final bool isEditMode;
+  final Event? event;
+
+  EventRegistrationForm({this.isEditMode = false, this.event});
   @override
   _EventRegistrationFormState createState() => _EventRegistrationFormState();
 }
@@ -32,7 +36,43 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
   String _eventId = Uuid().v4();
   String? _selectedPrefecture;
   File? _coverImage;
-  List<File> _selectedImages = [];
+  List<dynamic> _selectedImages = []; // FileとURLの両方をサポート
+  List<String> _existingImageUrls = []; // 既存のURLを保持
+  List<File> _newImageFiles = []; // 新規追加されたFileを保持
+  List<String> _deletedImageUrls = []; // 削除対象の既存画像URL
+  String? _coverImageUrl; // カバー画像URLを保持
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEditMode && widget.event != null) {
+      final event = widget.event!; // widget.eventとしてアクセス
+      // 既存の画像URLを保持
+      if (event.otherImageUrls != null && event.otherImageUrls!.isNotEmpty) {
+        _existingImageUrls = List<String>.from(event.otherImageUrls!);
+      }
+
+      _eventId = event.id;
+      _nameController.text = event.name;
+      _detailsController.text = event.details;
+      _placeController.text = event.place;
+      _urlController.text = event.eventUrl ?? '';
+      _selectedDate = event.eventDate;
+      _eventDateController.text =
+          DateFormat('yyyy/MM/dd').format(event.eventDate);
+      _selectedStartTime = TimeOfDay.fromDateTime(event.startTime);
+      _selectedEndTime = TimeOfDay.fromDateTime(event.endTime);
+      _selectedPrefecture = event.prefecture;
+
+      // カバー画像URLを保持しておく
+      _coverImageUrl =
+          event.coverImageUrl.isNotEmpty ? event.coverImageUrl : null;
+
+      // その他の画像の初期化 (FileにせずURLのまま扱う)
+      if (event.otherImageUrls != null && event.otherImageUrls!.isNotEmpty) {
+        _selectedImages = event.otherImageUrls!; // URLをそのまま保持
+      }
+    }
+  }
 
   // 都道府県選択
   void _showPrefectureDropdown(BuildContext context) {
@@ -72,13 +112,16 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
     }
   }
 
-  // その他の画像選択
+  // 画像を選択するメソッド(新規)
   Future<void> _pickOtherImages() async {
     final pickedFiles = await ImagePicker().pickMultiImage();
-    if (pickedFiles != null) {
+
+    if (pickedFiles.isNotEmpty) {
       setState(() {
-        _selectedImages
-            .addAll(pickedFiles.map((file) => File(file.path)).toList());
+        for (var xFile in pickedFiles) {
+          _newImageFiles.add(File(xFile.path));
+        }
+        print('Updated _newImageFiles: $_newImageFiles');
       });
     }
   }
@@ -116,52 +159,98 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
     }
   }
 
-  // その他画像プレビューと削除機能
   Widget _buildImagePreview() {
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
-      children: _selectedImages.map((image) {
-        return Stack(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.file(
-                image,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedImages.remove(image);
-                  });
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.close, color: Colors.red, size: 20),
+      children: [
+        // 既存のURL画像
+        ..._existingImageUrls.map((imageUrl) {
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  imageUrl,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
                 ),
               ),
-            ),
-          ],
-        );
-      }).toList(),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _existingImageUrls.remove(imageUrl);
+                      _deletedImageUrls.add(imageUrl); // 削除リストに追加
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close, color: Colors.red, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+        // 新規追加のFile画像
+        ..._newImageFiles.map((imageFile) {
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(
+                  imageFile,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _newImageFiles.remove(imageFile);
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close, color: Colors.red, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ],
     );
+  }
+
+  Future<String> uploadImage(File imageFile, String path) async {
+    final ref = FirebaseStorage.instance.ref().child(path);
+    await ref.putFile(imageFile);
+    return await ref.getDownloadURL(); // 新しい有効なURLを取得
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('イベント登録', style: TextStyle(color: Colors.white)),
+        title: Text(
+          widget.isEditMode ? 'イベント更新' : 'イベント登録', // 編集モードかどうかでタイトルを切り替え
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.black,
       ),
       backgroundColor: Colors.grey[900],
@@ -299,8 +388,21 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
                         fit: BoxFit.cover,
                       ),
                     )
-                  : Text("選択された表紙画像はありません",
-                      style: TextStyle(color: Colors.grey)),
+                  : (widget.event != null &&
+                          widget.event!.coverImageUrl.isNotEmpty)
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            widget.event!.coverImageUrl,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Text(
+                          "選択された表紙画像はありません",
+                          style: TextStyle(color: Colors.grey),
+                        ),
               const SizedBox(height: 16.0),
               Text('その他の画像',
                   style: TextStyle(color: Colors.white, fontSize: 16)),
@@ -321,34 +423,92 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
               SaveButton(
                 formKey: _formKey,
                 onSave: () async {
+                  final repository = EventSearchRepository();
+                  // 既存のカバー画像URLがあればそのまま使用、新規画像があれば上書き
+                  String coverImageUrl = _coverImageUrl ?? '';
+
+                  // 既存と新規の画像を含むリストを初期化
+                  List<String> otherImageUrls = List.from(_existingImageUrls);
+
+                  // カバー画像を選択している場合、新しい画像をアップロードし、URLを更新
+                  if (_coverImage != null) {
+                    coverImageUrl =
+                        await repository.uploadImageToStorage(_coverImage!);
+                  }
+
+                  // デバッグ: 初期状態の確認
+                  print('Initial otherImageUrls (pre-upload): $otherImageUrls');
+                  print('Selected Images for upload: $_newImageFiles');
+
+                  // その他の画像を処理
+                  if (_newImageFiles.isNotEmpty) {
+                    for (var image in _newImageFiles) {
+                      String url = await repository.uploadImageToStorage(image);
+                      otherImageUrls.add(url);
+                      print('Uploaded Image URL: $url');
+                    }
+                  }
+
+                  // 削除対象画像のURLをStorageから削除
+                  for (var imageUrl in _deletedImageUrls) {
+                    await repository.deleteImageFromStorage(imageUrl);
+                  }
+
+                  // デバッグ: アップロード後のotherImageUrls確認
+                  print(
+                      'Final otherImageUrls before saving to DB: $otherImageUrls');
+
+                  // Eventモデルのインスタンスを作成
                   final event = Event(
                     id: _eventId,
                     name: _nameController.text,
                     eventDate: _selectedDate!,
-                    startTime: DateTime.now(),
-                    endTime: DateTime.now(),
+                    startTime: _selectedStartTime != null
+                        ? DateTime(
+                            _selectedDate!.year,
+                            _selectedDate!.month,
+                            _selectedDate!.day,
+                            _selectedStartTime!.hour,
+                            _selectedStartTime!.minute)
+                        : DateTime.now(),
+                    endTime: _selectedEndTime != null
+                        ? DateTime(
+                            _selectedDate!.year,
+                            _selectedDate!.month,
+                            _selectedDate!.day,
+                            _selectedEndTime!.hour,
+                            _selectedEndTime!.minute)
+                        : DateTime.now(),
                     place: _placeController.text,
-                    coverImageUrl: '',
-                    otherImageUrls: [],
+                    coverImageUrl: coverImageUrl, // 修正: カバー画像URLを保持または更新
+                    otherImageUrls: otherImageUrls,
                     createdAt: DateTime.now(),
                     updatedAt: DateTime.now(),
                     isDeleted: false,
-                    address: _detailsController.text,
+                    address: _placeController.text,
+                    details: _detailsController.text,
                     prefecture: _selectedPrefecture ?? '',
                     organizer: '主催者名',
                     eventType: 1,
-                    eventUrl: _urlController.text,
+                    eventUrl: _urlController.text.isNotEmpty
+                        ? _urlController.text
+                        : null,
                     uid: FirebaseAuth.instance.currentUser!.uid,
                   );
-                  await saveEventToFirestore(
-                    context,
-                    event,
-                    _selectedImages,
-                    _coverImage,
-                    EventSearchRepository(),
-                  );
+
+                  print('Event object before saving: ${event.toJson()}');
+
+                  // 保存処理
+                  if (widget.isEditMode) {
+                    await repository.updateEvent(event);
+                  } else {
+                    await repository.saveEvent(event.toJson());
+                  }
+
+                  print('Event saved successfully.');
                 },
-              ),
+                buttonText: widget.isEditMode ? '更新' : '登録',
+              )
             ],
           ),
         ),

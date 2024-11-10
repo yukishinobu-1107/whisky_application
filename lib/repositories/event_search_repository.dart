@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:whisky_application/model/event_model.dart';
 
 class EventSearchRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // Firestoreからイベントデータを取得
   Future<List<Event>> fetchEvents() async {
@@ -53,6 +56,19 @@ class EventSearchRepository {
     }
   }
 
+// 画像をFirebase Storageから削除するメソッド
+  Future<void> deleteImageFromStorage(String imageUrl) async {
+    try {
+      // URLから参照を取得
+      final ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+      print('画像が正常に削除されました: $imageUrl');
+    } catch (e) {
+      print('画像の削除に失敗しました: $e');
+      throw Exception('画像の削除に失敗しました');
+    }
+  }
+
   // Firestoreからイベントデータを削除
   Future<void> deleteEvent(String eventId) async {
     try {
@@ -64,6 +80,7 @@ class EventSearchRepository {
     }
   }
 
+  // Firestoreのイベントデータと関連画像を削除
   Future<void> deleteEventWithImages(
       String eventId, List<String> imageUrls) async {
     try {
@@ -82,6 +99,27 @@ class EventSearchRepository {
     } catch (e) {
       print('イベント削除に失敗しました: $e');
       throw Exception('イベントの削除に失敗しました');
+    }
+  }
+
+  // Firebase Storageに画像をアップロードしてURLを取得
+  Future<String> uploadImageToStorage(File image) async {
+    try {
+      // ユニークなファイル名を生成
+      String fileName =
+          'event_images/${DateTime.now().millisecondsSinceEpoch}_${image.path.split('/').last}';
+      Reference ref = _storage.ref().child(fileName);
+
+      // Firebase Storageに画像をアップロード
+      UploadTask uploadTask = ref.putFile(image);
+      TaskSnapshot snapshot = await uploadTask;
+
+      // アップロード完了後、画像のURLを取得
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('画像のアップロードに失敗しました: $e');
+      throw Exception('画像のアップロードに失敗しました');
     }
   }
 }
