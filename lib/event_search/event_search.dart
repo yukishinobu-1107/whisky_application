@@ -74,8 +74,12 @@ class _EventSearchPageState extends ConsumerState<EventSearchPage> {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => EventRegistrationForm()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => EventRegistrationForm(
+                            isEditMode: false,
+                          )));
             },
             icon: Icon(Icons.add, color: Colors.yellowAccent, size: 36),
           ),

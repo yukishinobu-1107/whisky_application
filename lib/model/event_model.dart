@@ -29,7 +29,8 @@ class Event with _$Event {
     @TimestampConverter() required DateTime createdAt,
     @TimestampConverter() required DateTime updatedAt,
     required bool isDeleted,
-    required String address,
+    required String address, // 既存の住所フィールド
+    required String details, // 追加するイベント詳細のフィールド
     required String prefecture,
     required String organizer,
     required int eventType,

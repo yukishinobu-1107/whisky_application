@@ -3,6 +3,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../event_details/event_detail_screen.dart';
+import '../event_registration/event_registration_form.dart';
 import '../model/event_model.dart';
 import '../repositories/event_search_repository.dart';
 
@@ -22,6 +24,8 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String currentUserUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    print('^------------------------------');
+    print(event);
 
     // イベントタイプによるカードデザインの設定
     int eventType = event.eventType;
@@ -82,9 +86,15 @@ class EventCard extends StatelessWidget {
                       onSelected: (String result) {
                         if (result == 'edit') {
                           // 編集処理
-                          Navigator.pushNamed(
-                              context, '/event_registration_form',
-                              arguments: event);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EventRegistrationForm(
+                                isEditMode: true,
+                                event: event, // 編集対象のeventデータを渡す
+                              ),
+                            ),
+                          );
                         } else if (result == 'delete') {
                           // 削除処理
                           _showDeleteConfirmation(context);
@@ -171,6 +181,34 @@ class EventCard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 10),
+
+            // 右下に「詳細を見る」ボタンを配置
+            Align(
+              alignment: Alignment.bottomRight,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orangeAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EventDetailScreen(event: event),
+                    ),
+                  );
+                },
+                child: const Text(
+                  '詳細を見る',
+                  style: TextStyle(color: Colors.black),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -213,7 +251,6 @@ class EventCard extends StatelessWidget {
 
         // Firebase Storageからその他の画像を削除
         if (event.otherImageUrls != null) {
-          // otherImageUrlsがnullか確認
           for (String imageUrl in event.otherImageUrls!) {
             if (imageUrl.isNotEmpty) {
               final imageRef = FirebaseStorage.instance.refFromURL(imageUrl);
