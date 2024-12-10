@@ -95,83 +95,46 @@ class FirestoreService {
 // // 仮データを作成して追加
   Future<void> addMockData() async {
     final categories = [
-      {
-        'name': 'ビーフジャーキー',
-        'categoryId': 1,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
-      {
-        'name': '角煮',
-        'categoryId': 1,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
-      {
-        'name': '焼肉',
-        'categoryId': 1,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
-      {
-        'name': 'スモークサーモン',
-        'categoryId': 2,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
-      {
-        'name': '刺身',
-        'categoryId': 2,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
-      {
-        'name': 'カシューナッツ',
-        'categoryId': 3,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
-      {
-        'name': 'ピーナッツ',
-        'categoryId': 3,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
-      {
-        'name': 'シーザーサラダ',
-        'categoryId': 4,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
-      {
-        'name': 'チェダーチーズ',
-        'categoryId': 5,
-        'like': 0,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false
-      },
+    {
+    'name': 'お肉類',
+    'categoryId': 1,
+    'createdAt': DateTime.now(),
+    'updatedAt': DateTime.now(),
+    'isDeleted': false,
+  },
+  {
+    'name': '魚介類',
+    'categoryId': 2,
+    'createdAt': DateTime.now(),
+    'updatedAt': DateTime.now(),
+    'isDeleted': false,
+  },
+  {
+    'name': 'ナッツ類',
+    'categoryId': 3,
+    'createdAt': DateTime.now(),
+    'updatedAt': DateTime.now(),
+    'isDeleted': false,
+  },
+  {
+    'name': 'サラダ類',
+    'categoryId': 4,
+    'createdAt': DateTime.now(),
+    'updatedAt': DateTime.now(),
+    'isDeleted': false,
+  },
+  {
+    'name': 'チーズ類',
+    'categoryId': 5,
+    'createdAt': DateTime.now(),
+    'updatedAt': DateTime.now(),
+    'isDeleted': false,
+  },
     ];
 
     // items コレクションに仮データを追加
     for (var item in categories) {
-      await _firestore.collection('snacks').add(item);
+      await _firestore.collection('categories').add(item);
     }
   }
 }
