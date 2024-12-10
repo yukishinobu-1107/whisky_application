@@ -1,13 +1,22 @@
 import 'dart:io';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart'; // Firebase Storageのインポート
+
 import '../constants/regions_and_prefectures.dart';
+import '../model/event_model.dart';
 import '../repositories/event_search_repository.dart';
+import 'save_button.dart';
 
 class EventRegistrationForm extends StatefulWidget {
+  final bool isEditMode;
+  final Event? event;
+
+  EventRegistrationForm({this.isEditMode = false, this.event});
   @override
   _EventRegistrationFormState createState() => _EventRegistrationFormState();
 }
@@ -17,81 +26,67 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _detailsController = TextEditingController();
-  final TextEditingController _place = TextEditingController();
+  final TextEditingController _placeController = TextEditingController();
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _eventDateController = TextEditingController();
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedStartTime;
   TimeOfDay? _selectedEndTime;
-  String _eventId = '';
+  String _eventId = Uuid().v4();
   String? _selectedPrefecture;
   File? _coverImage;
-  List<File> _selectedImages = [];
-
-  final ImagePicker _picker = ImagePicker();
-  final EventSearchRepository _eventSearchRepository = EventSearchRepository();
-
+  List<dynamic> _selectedImages = []; // FileとURLの両方をサポート
+  List<String> _existingImageUrls = []; // 既存のURLを保持
+  List<File> _newImageFiles = []; // 新規追加されたFileを保持
+  List<String> _deletedImageUrls = []; // 削除対象の既存画像URL
+  String? _coverImageUrl; // カバー画像URLを保持
   @override
   void initState() {
     super.initState();
-    _eventId = Uuid().v4();
-  }
+    if (widget.isEditMode && widget.event != null) {
+      final event = widget.event!; // widget.eventとしてアクセス
+      // 既存の画像URLを保持
+      if (event.otherImageUrls != null && event.otherImageUrls!.isNotEmpty) {
+        _existingImageUrls = List<String>.from(event.otherImageUrls!);
+      }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _eventDateController.text = "${picked.toLocal()}".split(' ')[0];
-      });
+      _eventId = event.id;
+      _nameController.text = event.name;
+      _detailsController.text = event.details;
+      _placeController.text = event.place;
+      _urlController.text = event.eventUrl ?? '';
+      _selectedDate = event.eventDate;
+      _eventDateController.text =
+          DateFormat('yyyy/MM/dd').format(event.eventDate);
+      _selectedStartTime = TimeOfDay.fromDateTime(event.startTime);
+      _selectedEndTime = TimeOfDay.fromDateTime(event.endTime);
+      _selectedPrefecture = event.prefecture;
+
+      // カバー画像URLを保持しておく
+      _coverImageUrl =
+          event.coverImageUrl.isNotEmpty ? event.coverImageUrl : null;
+
+      // その他の画像の初期化 (FileにせずURLのまま扱う)
+      if (event.otherImageUrls != null && event.otherImageUrls!.isNotEmpty) {
+        _selectedImages = event.otherImageUrls!; // URLをそのまま保持
+      }
     }
   }
 
-  Future<void> _selectStartTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-    if (picked != null && picked != _selectedStartTime) {
-      setState(() {
-        _selectedStartTime = picked;
-      });
-    }
-  }
-
-  Future<void> _selectEndTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-    if (picked != null && picked != _selectedEndTime) {
-      setState(() {
-        _selectedEndTime = picked;
-      });
-    }
-  }
-
+  // 都道府県選択
   void _showPrefectureDropdown(BuildContext context) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: MediaQuery.of(context).size.height * 0.5,
-          color: Colors.black,
+          color: Colors.grey[900],
           child: ListView.builder(
             itemCount: prefectures.length,
             itemBuilder: (context, index) {
               return ListTile(
-                title: Text(
-                  prefectures[index],
-                  style: const TextStyle(color: Colors.white),
-                ),
+                title: Text(prefectures[index],
+                    style: TextStyle(color: Colors.white)),
                 onTap: () {
                   setState(() {
                     _selectedPrefecture = prefectures[index];
@@ -106,9 +101,10 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
     );
   }
 
+  // カバー画像選択
   Future<void> _pickCoverImage() async {
-    final XFile? pickedFile =
-        await _picker.pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _coverImage = File(pickedFile.path);
@@ -116,355 +112,403 @@ class _EventRegistrationFormState extends State<EventRegistrationForm> {
     }
   }
 
+  // 画像を選択するメソッド(新規)
   Future<void> _pickOtherImages() async {
-    final List<XFile>? pickedFiles = await _picker.pickMultiImage();
-    if (pickedFiles != null) {
+    final pickedFiles = await ImagePicker().pickMultiImage();
+
+    if (pickedFiles.isNotEmpty) {
       setState(() {
-        _selectedImages
-            .addAll(pickedFiles.map((file) => File(file.path)).toList());
+        for (var xFile in pickedFiles) {
+          _newImageFiles.add(File(xFile.path));
+        }
+        print('Updated _newImageFiles: $_newImageFiles');
       });
     }
   }
 
-  Future<String> _uploadImage(File imageFile, String path) async {
-    try {
-      final ref = FirebaseStorage.instance.ref().child(path);
-      await ref.putFile(imageFile);
-      return await ref.getDownloadURL();
-    } catch (e) {
-      print('画像のアップロードに失敗しました: $e');
-      throw e;
+  // 時刻選択
+  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStartTime) {
+          _selectedStartTime = picked;
+        } else {
+          _selectedEndTime = picked;
+        }
+      });
     }
   }
 
-  Future<void> _saveEventToFirestore() async {
-    if (_coverImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('表紙画像を選択してください')),
-      );
-      return;
-    }
-
-    if (_selectedStartTime == null || _selectedEndTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('開始時間と終了時間を選択してください')),
-      );
-      return;
-    }
-
-    final startDateTime = DateTime(
-      _selectedDate!.year,
-      _selectedDate!.month,
-      _selectedDate!.day,
-      _selectedStartTime!.hour,
-      _selectedStartTime!.minute,
+  // 日付選択
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
     );
-    final endDateTime = DateTime(
-      _selectedDate!.year,
-      _selectedDate!.month,
-      _selectedDate!.day,
-      _selectedEndTime!.hour,
-      _selectedEndTime!.minute,
-    );
-
-    try {
-      final coverImageUrl = await _uploadImage(
-          _coverImage!, 'event_images/$_eventId/cover_image.jpg');
-      final otherImageUrls = await Future.wait(_selectedImages.map((image) =>
-          _uploadImage(image,
-              'event_images/$_eventId/other_images/${Uuid().v4()}.jpg')));
-
-      final eventData = {
-        'id': _eventId,
-        'name': _nameController.text,
-        'eventDate': _selectedDate,
-        'startTime': Timestamp.fromDate(startDateTime),
-        'endTime': Timestamp.fromDate(endDateTime),
-        'place': _place.text,
-        'coverImageUrl': coverImageUrl,
-        'otherImageUrls': otherImageUrls,
-        'address': _detailsController.text,
-        'prefecture': _selectedPrefecture,
-        'organizer': '主催者名',
-        'eventType': 1,
-        'eventUrl': _urlController.text,
-        'createdAt': DateTime.now(),
-        'updatedAt': DateTime.now(),
-        'isDeleted': false,
-      };
-
-      await _eventSearchRepository.saveEvent(eventData);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('イベントが正常に登録されました')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('イベントの登録に失敗しました: $e')),
-      );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _eventDateController.text = DateFormat('yyyy/MM/dd').format(picked);
+      });
     }
+  }
+
+  Widget _buildImagePreview() {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: [
+        // 既存のURL画像
+        ..._existingImageUrls.map((imageUrl) {
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  imageUrl,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _existingImageUrls.remove(imageUrl);
+                      _deletedImageUrls.add(imageUrl); // 削除リストに追加
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close, color: Colors.red, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+        // 新規追加のFile画像
+        ..._newImageFiles.map((imageFile) {
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(
+                  imageFile,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _newImageFiles.remove(imageFile);
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close, color: Colors.red, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  Future<String> uploadImage(File imageFile, String path) async {
+    final ref = FirebaseStorage.instance.ref().child(path);
+    await ref.putFile(imageFile);
+    return await ref.getDownloadURL(); // 新しい有効なURLを取得
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          centerTitle: true,
-          title: const Text('イベント登録',
-              style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white)),
-          backgroundColor: Colors.black,
-          iconTheme: const IconThemeData(color: Colors.white)),
-      backgroundColor: Colors.black,
-      body: Container(
+        title: Text(
+          widget.isEditMode ? 'イベント更新' : 'イベント登録', // 編集モードかどうかでタイトルを切り替え
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.black,
+      ),
+      backgroundColor: Colors.grey[900],
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
-        color: Colors.black,
         child: Form(
           key: _formKey,
           child: ListView(
-            children: <Widget>[
+            children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'イベント名*',
-                  labelStyle: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18.0,
-                  ),
-                  hintText: 'イベント名を入力してください',
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'イベント名',
+                  labelStyle: TextStyle(color: Colors.orangeAccent),
+                  filled: true,
+                  fillColor: Colors.grey[800],
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                style: const TextStyle(color: Colors.white),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'イベント名を入力してください' : null,
               ),
-              const Divider(color: Colors.grey),
               const SizedBox(height: 16.0),
               TextFormField(
                 controller: _detailsController,
-                decoration: const InputDecoration(
-                  labelText: 'イベント詳細*',
-                  labelStyle: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18.0,
-                  ),
-                  hintText: 'イベントの住所や重要事項を記載してください',
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'イベント詳細',
+                  labelStyle: TextStyle(color: Colors.orangeAccent),
+                  filled: true,
+                  fillColor: Colors.grey[800],
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                style: const TextStyle(color: Colors.white),
-                maxLines: null,
+                maxLines: 3,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'イベント詳細を入力してください' : null,
               ),
-              const Divider(color: Colors.grey),
               const SizedBox(height: 16.0),
               TextFormField(
-                controller: _place,
-                decoration: const InputDecoration(
-                  labelText: '場所*',
-                  labelStyle: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18.0,
-                  ),
-                  hintText: 'イベント開催場所を記載してください',
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
+                controller: _placeController,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: '場所',
+                  labelStyle: TextStyle(color: Colors.orangeAccent),
+                  filled: true,
+                  fillColor: Colors.grey[800],
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                style: const TextStyle(color: Colors.white),
-                maxLines: null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? '場所を入力してください' : null,
               ),
-              const Divider(color: Colors.grey),
               const SizedBox(height: 16.0),
               TextFormField(
                 controller: _urlController,
-                decoration: const InputDecoration(
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
                   labelText: 'イベントURL',
-                  labelStyle: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18.0,
-                  ),
-                  hintText: 'イベントのURLを入力してください',
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
+                  labelStyle: TextStyle(color: Colors.orangeAccent),
+                  filled: true,
+                  fillColor: Colors.grey[800],
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                style: const TextStyle(color: Colors.white),
               ),
-              const Divider(color: Colors.grey),
               const SizedBox(height: 16.0),
               TextFormField(
                 controller: _eventDateController,
-                decoration: const InputDecoration(
-                  labelText: 'イベント日付*',
-                  labelStyle: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18.0,
-                  ),
-                  hintText: 'イベントの日付を選択してください',
-                  hintStyle: TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'イベント日付',
+                  labelStyle: TextStyle(color: Colors.orangeAccent),
+                  filled: true,
+                  fillColor: Colors.grey[800],
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                style: const TextStyle(color: Colors.white),
-                onTap: () {
-                  _selectDate(context);
-                },
+                readOnly: true,
+                onTap: () => _selectDate(context),
               ),
-              const Divider(color: Colors.grey),
               const SizedBox(height: 16.0),
               ListTile(
                 title: Text(
                   _selectedStartTime == null
-                      ? '開始時間を選択*'
+                      ? '開始時間を選択'
                       : '開始時間: ${_selectedStartTime!.format(context)}',
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: Colors.white),
                 ),
-                onTap: () {
-                  _selectStartTime(context);
-                },
-                trailing: const Icon(Icons.access_time, color: Colors.white),
+                trailing: Icon(Icons.access_time, color: Colors.orangeAccent),
+                onTap: () => _selectTime(context, true),
               ),
-              const Divider(color: Colors.grey),
               ListTile(
                 title: Text(
                   _selectedEndTime == null
-                      ? '終了時間を選択*'
+                      ? '終了時間を選択'
                       : '終了時間: ${_selectedEndTime!.format(context)}',
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: Colors.white),
                 ),
-                onTap: () {
-                  _selectEndTime(context);
-                },
-                trailing: const Icon(Icons.access_time, color: Colors.white),
+                trailing: Icon(Icons.access_time, color: Colors.orangeAccent),
+                onTap: () => _selectTime(context, false),
               ),
-              const Divider(color: Colors.grey),
               const SizedBox(height: 16.0),
               ListTile(
                 title: Text(
-                  _selectedPrefecture ?? '都道府県を選択してください*',
-                  style: const TextStyle(color: Colors.grey),
+                  _selectedPrefecture ?? '都道府県を選択してください',
+                  style: TextStyle(color: Colors.white),
                 ),
-                onTap: () {
-                  _showPrefectureDropdown(context);
-                },
                 trailing:
-                    const Icon(Icons.arrow_drop_down, color: Colors.white),
+                    Icon(Icons.arrow_drop_down, color: Colors.orangeAccent),
+                onTap: () => _showPrefectureDropdown(context),
               ),
-              const Divider(color: Colors.grey),
               const SizedBox(height: 16.0),
-              const Text(
-                'イベント表紙画像を選択*',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
+              Text('表紙画像', style: TextStyle(color: Colors.white, fontSize: 16)),
               const SizedBox(height: 10),
               ElevatedButton.icon(
                 onPressed: _pickCoverImage,
-                icon: const Icon(Icons.add_a_photo, color: Colors.white),
-                label: const Text(
-                  '画像を選択',
-                  style: TextStyle(color: Colors.white),
-                ),
+                icon: Icon(Icons.add_a_photo, color: Colors.white),
+                label: Text('画像を選択', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               ),
               const SizedBox(height: 10),
               _coverImage != null
-                  ? Stack(
-                      children: [
-                        Image.file(_coverImage!,
-                            width: 100, height: 100, fit: BoxFit.cover),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: IconButton(
-                            icon: Icon(Icons.close, color: Colors.red),
-                            onPressed: () {
-                              setState(() {
-                                _coverImage = null;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        _coverImage!,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
                     )
-                  : const Text(
-                      '選択された表紙画像はありません',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-              const Divider(color: Colors.grey),
+                  : (widget.event != null &&
+                          widget.event!.coverImageUrl.isNotEmpty)
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            widget.event!.coverImageUrl,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : Text(
+                          "選択された表紙画像はありません",
+                          style: TextStyle(color: Colors.grey),
+                        ),
               const SizedBox(height: 16.0),
-              const Text(
-                'その他の画像を選択',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
+              Text('その他の画像',
+                  style: TextStyle(color: Colors.white, fontSize: 16)),
               const SizedBox(height: 10),
               ElevatedButton.icon(
                 onPressed: _pickOtherImages,
-                icon:
-                    const Icon(Icons.add_photo_alternate, color: Colors.white),
-                label: const Text(
-                  '画像を選択',
-                  style: TextStyle(color: Colors.white),
-                ),
+                icon: Icon(Icons.add_photo_alternate, color: Colors.white),
+                label: Text('画像を選択', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               ),
               const SizedBox(height: 10),
-              _selectedImages.isNotEmpty
-                  ? Wrap(
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      children: _selectedImages.map((image) {
-                        return Stack(
-                          children: [
-                            Image.file(image,
-                                width: 100, height: 100, fit: BoxFit.cover),
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: IconButton(
-                                icon: Icon(Icons.close, color: Colors.red),
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedImages.remove(image);
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    )
-                  : const Text(
-                      '選択された画像はありません',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-              const Divider(color: Colors.grey),
+              _buildImagePreview(),
               const SizedBox(height: 32.0),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _saveEventToFirestore();
+              SaveButton(
+                formKey: _formKey,
+                onSave: () async {
+                  final repository = EventSearchRepository();
+                  // 既存のカバー画像URLがあればそのまま使用、新規画像があれば上書き
+                  String coverImageUrl = _coverImageUrl ?? '';
+
+                  // 既存と新規の画像を含むリストを初期化
+                  List<String> otherImageUrls = List.from(_existingImageUrls);
+
+                  // カバー画像を選択している場合、新しい画像をアップロードし、URLを更新
+                  if (_coverImage != null) {
+                    coverImageUrl =
+                        await repository.uploadImageToStorage(_coverImage!);
                   }
+
+                  // デバッグ: 初期状態の確認
+                  print('Initial otherImageUrls (pre-upload): $otherImageUrls');
+                  print('Selected Images for upload: $_newImageFiles');
+
+                  // その他の画像を処理
+                  if (_newImageFiles.isNotEmpty) {
+                    for (var image in _newImageFiles) {
+                      String url = await repository.uploadImageToStorage(image);
+                      otherImageUrls.add(url);
+                      print('Uploaded Image URL: $url');
+                    }
+                  }
+
+                  // 削除対象画像のURLをStorageから削除
+                  for (var imageUrl in _deletedImageUrls) {
+                    await repository.deleteImageFromStorage(imageUrl);
+                  }
+
+                  // デバッグ: アップロード後のotherImageUrls確認
+                  print(
+                      'Final otherImageUrls before saving to DB: $otherImageUrls');
+
+                  // Eventモデルのインスタンスを作成
+                  final event = Event(
+                    id: _eventId,
+                    name: _nameController.text,
+                    eventDate: _selectedDate!,
+                    startTime: _selectedStartTime != null
+                        ? DateTime(
+                            _selectedDate!.year,
+                            _selectedDate!.month,
+                            _selectedDate!.day,
+                            _selectedStartTime!.hour,
+                            _selectedStartTime!.minute)
+                        : DateTime.now(),
+                    endTime: _selectedEndTime != null
+                        ? DateTime(
+                            _selectedDate!.year,
+                            _selectedDate!.month,
+                            _selectedDate!.day,
+                            _selectedEndTime!.hour,
+                            _selectedEndTime!.minute)
+                        : DateTime.now(),
+                    place: _placeController.text,
+                    coverImageUrl: coverImageUrl, // 修正: カバー画像URLを保持または更新
+                    otherImageUrls: otherImageUrls,
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                    isDeleted: false,
+                    address: _placeController.text,
+                    details: _detailsController.text,
+                    prefecture: _selectedPrefecture ?? '',
+                    organizer: '主催者名',
+                    eventType: 1,
+                    eventUrl: _urlController.text.isNotEmpty
+                        ? _urlController.text
+                        : null,
+                    uid: FirebaseAuth.instance.currentUser!.uid,
+                  );
+
+                  print('Event object before saving: ${event.toJson()}');
+
+                  // 保存処理
+                  if (widget.isEditMode) {
+                    await repository.updateEvent(event);
+                  } else {
+                    await repository.saveEvent(event.toJson());
+                  }
+
+                  print('Event saved successfully.');
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orangeAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0, vertical: 12.0),
-                  minimumSize: Size(150, 40),
-                  elevation: 5,
-                ),
-                child: const Text(
-                  '登録',
-                  style: TextStyle(
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
+                buttonText: widget.isEditMode ? '更新' : '登録',
+              )
             ],
           ),
         ),
